@@ -116,7 +116,7 @@
             {
               "type": "Query",
               "text": {
-                "value": "@concat('INSERT INTO silver_rejects.', pipeline().parameters.p_entity_name, ' (RunId, RejectedAtUtc, RuleCode, ', activity('LKP_Config').output.firstRow.RejectColumns, ', RawRow) SELECT ''', pipeline().parameters.p_run_id, ''', SYSUTCDATETIME(), ''DQ_REJECT'', ', activity('LKP_Config').output.firstRow.RejectColumns, ', CONCAT_WS(''|'', ', activity('LKP_Config').output.firstRow.RejectColumns, ') FROM LH_Finance.dbo.', activity('LKP_Config').output.firstRow.BronzeTable, ' WHERE ', activity('LKP_Config').output.firstRow.RejectPredicate, ';')",
+                "value": "@concat('INSERT INTO silver_rejects.', pipeline().parameters.p_entity_name, ' (RunId, RejectedAtUtc, RuleCode, ', activity('LKP_Config').output.firstRow.RejectColumns, ', RawRow) SELECT ''', pipeline().parameters.p_run_id, ''', SYSUTCDATETIME(), ''DQ_REJECT'', ', activity('LKP_Config').output.firstRow.RejectColumns, ', CONCAT_WS(''|'', ', activity('LKP_Config').output.firstRow.RejectColumns, ') FROM LH_Finance.dbo.', activity('LKP_Config').output.firstRow.BronzeTable, ' WHERE ', activity('LKP_Config').output.firstRow.RejectPredicate, '; EXEC audit.SP_LogDataQuality @PipelineRunId=''', pipeline().parameters.p_run_id, ''', @EntityName=''', pipeline().parameters.p_entity_name, ''', @RuleCode=''DQ_REJECT'', @RowsFailed=(SELECT COUNT_BIG(*) FROM silver_rejects.', pipeline().parameters.p_entity_name, ' WHERE RunId=''', pipeline().parameters.p_run_id, '''), @RuleDescription=''Configured Silver reject predicate'', @RejectTable=''silver_rejects.', pipeline().parameters.p_entity_name, ''';')",
                 "type": "Expression"
               }
             }
