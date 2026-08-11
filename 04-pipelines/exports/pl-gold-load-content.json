@@ -64,11 +64,53 @@
         }
       },
       {
+        "name": "AUDIT_DimCustomer_Success",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Upsert_DimCustomer", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "storedProcedureName": "[audit].[sp_log_activity]",
+          "storedProcedureParameters": {
+            "run_id": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "activity_run_id": { "value": "@concat(pipeline().parameters.p_run_id, '-dc')", "type": "String" },
+            "pipeline_name": { "value": "PL_GOLD_LOAD", "type": "String" },
+            "activity_name": { "value": "SP_Upsert_DimCustomer", "type": "String" },
+            "activity_type": { "value": "StoredProcedure", "type": "String" },
+            "entity_name": { "value": "ALL", "type": "String" },
+            "layer": { "value": "Gold", "type": "String" },
+            "start_time_utc": { "value": { "value": "@activity('SP_Upsert_DimCustomer').ExecutionStartTime", "type": "Expression" }, "type": "String" },
+            "end_time_utc": { "value": { "value": "@activity('SP_Upsert_DimCustomer').ExecutionEndTime", "type": "Expression" }, "type": "String" },
+            "status": { "value": "Succeeded", "type": "String" }
+          }
+        },
+        "linkedService": { "name": "WH_Finance_Gold", "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": { "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa", "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } } }
+      },
+      {
+        "name": "AUDIT_DimGLAccount_Success",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Upsert_DimGLAccount", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "storedProcedureName": "[audit].[sp_log_activity]",
+          "storedProcedureParameters": {
+            "run_id": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "activity_run_id": { "value": "@concat(pipeline().parameters.p_run_id, '-dg')", "type": "String" },
+            "pipeline_name": { "value": "PL_GOLD_LOAD", "type": "String" },
+            "activity_name": { "value": "SP_Upsert_DimGLAccount", "type": "String" },
+            "activity_type": { "value": "StoredProcedure", "type": "String" },
+            "entity_name": { "value": "ALL", "type": "String" },
+            "layer": { "value": "Gold", "type": "String" },
+            "start_time_utc": { "value": { "value": "@activity('SP_Upsert_DimGLAccount').ExecutionStartTime", "type": "Expression" }, "type": "String" },
+            "end_time_utc": { "value": { "value": "@activity('SP_Upsert_DimGLAccount').ExecutionEndTime", "type": "Expression" }, "type": "String" },
+            "status": { "value": "Succeeded", "type": "String" }
+          }
+        },
+        "linkedService": { "name": "WH_Finance_Gold", "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": { "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa", "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } } }
+      },
+      {
         "name": "SP_Load_FactRevenue",
         "type": "SqlServerStoredProcedure",
         "dependsOn": [
-          { "activity": "SP_Upsert_DimCustomer", "dependencyConditions": ["Succeeded"] },
-          { "activity": "SP_Upsert_DimGLAccount", "dependencyConditions": ["Succeeded"] }
+          { "activity": "AUDIT_DimCustomer_Success", "dependencyConditions": ["Succeeded"] },
+          { "activity": "AUDIT_DimGLAccount_Success", "dependencyConditions": ["Succeeded"] }
         ],
         "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
         "typeProperties": {
@@ -87,9 +129,30 @@
         }
       },
       {
-        "name": "SP_Run_Gold_Validation",
+        "name": "AUDIT_FactRevenue_Success",
         "type": "SqlServerStoredProcedure",
         "dependsOn": [ { "activity": "SP_Load_FactRevenue", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "storedProcedureName": "[audit].[sp_log_activity]",
+          "storedProcedureParameters": {
+            "run_id": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "activity_run_id": { "value": "@concat(pipeline().parameters.p_run_id, '-fr')", "type": "String" },
+            "pipeline_name": { "value": "PL_GOLD_LOAD", "type": "String" },
+            "activity_name": { "value": "SP_Load_FactRevenue", "type": "String" },
+            "activity_type": { "value": "StoredProcedure", "type": "String" },
+            "entity_name": { "value": "ALL", "type": "String" },
+            "layer": { "value": "Gold", "type": "String" },
+            "start_time_utc": { "value": { "value": "@activity('SP_Load_FactRevenue').ExecutionStartTime", "type": "Expression" }, "type": "String" },
+            "end_time_utc": { "value": { "value": "@activity('SP_Load_FactRevenue').ExecutionEndTime", "type": "Expression" }, "type": "String" },
+            "status": { "value": "Succeeded", "type": "String" }
+          }
+        },
+        "linkedService": { "name": "WH_Finance_Gold", "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": { "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa", "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } } }
+      },
+      {
+        "name": "SP_Run_Gold_Validation",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "AUDIT_FactRevenue_Success", "dependencyConditions": ["Succeeded"] } ],
         "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
         "typeProperties": {
           "storedProcedureName": "[audit].[SP_RunGoldValidation]",
