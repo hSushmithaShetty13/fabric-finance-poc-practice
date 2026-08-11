@@ -1,0 +1,58 @@
+table 'Source Config'
+
+	column EntityName
+		dataType: string
+		isKey
+		sourceColumn: EntityName
+
+	column SourcePath
+		dataType: string
+		sourceColumn: SourcePath
+
+	column FilePattern
+		dataType: string
+		sourceColumn: FilePattern
+
+	column BronzeTable
+		dataType: string
+		sourceColumn: BronzeTable
+
+	column SilverTable
+		dataType: string
+		sourceColumn: SilverTable
+
+	column LoadMode
+		dataType: string
+		sourceColumn: LoadMode
+
+	column WatermarkColumn
+		dataType: string
+		sourceColumn: WatermarkColumn
+
+	column TolerancePct
+		dataType: decimal
+		summarizeBy: average
+		sourceColumn: TolerancePct
+
+	column IsActive
+		dataType: boolean
+		sourceColumn: IsActive
+
+	column RejectPredicate
+		dataType: string
+		isHidden
+		sourceColumn: RejectPredicate
+
+	column RejectColumns
+		dataType: string
+		isHidden
+		sourceColumn: RejectColumns
+
+	partition 'Source Config' = m
+		mode: import
+		source =
+			let
+				Source = Sql.Database("xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "WH_Finance_Gold"),
+				Data = Source{[Schema="control", Item="SourceConfig"]}[Data]
+			in
+				Data

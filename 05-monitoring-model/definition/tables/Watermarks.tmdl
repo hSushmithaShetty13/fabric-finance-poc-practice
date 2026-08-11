@@ -1,0 +1,27 @@
+table Watermarks
+
+	column EntityName
+		dataType: string
+		isKey
+		sourceColumn: EntityName
+
+	column WatermarkColumn
+		dataType: string
+		sourceColumn: WatermarkColumn
+
+	column WatermarkValue
+		dataType: string
+		sourceColumn: WatermarkValue
+
+	column LastUpdatedUtc
+		dataType: dateTime
+		sourceColumn: LastUpdatedUtc
+
+	partition Watermarks = m
+		mode: import
+		source =
+			let
+				Source = Sql.Database("xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "WH_Finance_Gold"),
+				Data = Source{[Schema="control", Item="Watermark"]}[Data]
+			in
+				Data

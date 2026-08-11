@@ -1,0 +1,134 @@
+table 'Pipeline Runs'
+
+	/// Percentage of logged runs that succeeded.
+	measure 'Success Rate %' =
+		DIVIDE(
+			CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Succeeded"),
+			COUNTROWS('Pipeline Runs')
+		)
+		formatString: 0.00%
+
+	/// Number of pipeline runs that started today.
+	measure 'Runs Today' =
+		CALCULATE(
+			COUNTROWS('Pipeline Runs'),
+			FILTER('Pipeline Runs', DATEVALUE('Pipeline Runs'[StartTime]) = TODAY())
+		)
+		formatString: #,##0
+
+	/// Rows written to downstream targets.
+	measure 'Total Rows Processed' = SUM('Pipeline Runs'[TargetRowCount])
+		formatString: #,##0
+
+	/// Rows classified as rejected by Silver processing.
+	measure 'Total Rows Rejected' = SUM('Pipeline Runs'[RejectedRowCount])
+		formatString: #,##0
+
+	/// Average elapsed time for completed runs.
+	measure 'Average Duration Seconds' = AVERAGE('Pipeline Runs'[DurationSeconds])
+		formatString: #,##0.0
+
+	/// Percentage variance between source and target counts.
+	measure 'Reconciliation Variance %' =
+		DIVIDE(
+			ABS(SUM('Pipeline Runs'[SourceRowCount]) - SUM('Pipeline Runs'[TargetRowCount])),
+			SUM('Pipeline Runs'[SourceRowCount])
+		)
+		formatString: 0.00%
+
+	/// Number of logged validation failures.
+	measure 'Validation Failures' =
+		CALCULATE(COUNTROWS('Validation Results'), 'Validation Results'[Result] = "Fail")
+		formatString: #,##0
+
+	column PipelineRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: PipelineRunId
+
+	column ParentRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: ParentRunId
+
+	column PipelineName
+		dataType: string
+		sourceColumn: PipelineName
+
+	column Environment
+		dataType: string
+		sourceColumn: Environment
+
+	column LoadType
+		dataType: string
+		sourceColumn: LoadType
+
+	column EntityName
+		dataType: string
+		sourceColumn: EntityName
+
+	column SourceSystem
+		dataType: string
+		sourceColumn: SourceSystem
+
+	column RunDate
+		dataType: dateTime
+		sourceColumn: RunDate
+
+	column StartTime
+		dataType: dateTime
+		sourceColumn: StartTime
+
+	column EndTime
+		dataType: dateTime
+		sourceColumn: EndTime
+
+	column DurationSeconds
+		dataType: int64
+		summarizeBy: average
+		sourceColumn: DurationSeconds
+
+	column Status
+		dataType: string
+		sourceColumn: Status
+
+	column SourceRowCount
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: SourceRowCount
+
+	column TargetRowCount
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: TargetRowCount
+
+	column RejectedRowCount
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: RejectedRowCount
+
+	column ErrorMessage
+		dataType: string
+		sourceColumn: ErrorMessage
+
+	column TriggeredBy
+		dataType: string
+		sourceColumn: TriggeredBy
+
+	column LoggedAt
+		dataType: dateTime
+		sourceColumn: LoggedAt
+
+	partition 'Pipeline Runs' = m
+		mode: import
+		source =
+			let
+				Source = Sql.Database("xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "WH_Finance_Gold"),
+				Data = Source{[Schema="audit", Item="PipelineRunLog"]}[Data]
+			in
+				Data

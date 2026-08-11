@@ -1,0 +1,11 @@
+relationship 'Pipeline Runs to Source Config'
+	fromColumn: 'Pipeline Runs'.EntityName
+	toColumn: 'Source Config'.EntityName
+
+relationship 'Validation Results to Pipeline Runs'
+	fromColumn: 'Validation Results'.PipelineRunId
+	toColumn: 'Pipeline Runs'.PipelineRunId
+
+relationship 'Watermarks to Source Config'
+	fromColumn: Watermarks.EntityName
+	toColumn: 'Source Config'.EntityName

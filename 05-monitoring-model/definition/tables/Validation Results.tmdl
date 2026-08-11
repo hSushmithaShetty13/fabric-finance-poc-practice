@@ -1,0 +1,55 @@
+table 'Validation Results'
+
+	measure 'Validation Pass Rate %' =
+		DIVIDE(
+			CALCULATE(COUNTROWS('Validation Results'), 'Validation Results'[Result] = "Pass"),
+			COUNTROWS('Validation Results')
+		)
+		formatString: 0.00%
+
+	measure 'Failed Rules' =
+		CALCULATE(COUNTROWS('Validation Results'), 'Validation Results'[Result] = "Fail")
+		formatString: #,##0
+
+	column PipelineRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: PipelineRunId
+
+	column RuleName
+		dataType: string
+		sourceColumn: RuleName
+
+	column RuleCategory
+		dataType: string
+		sourceColumn: RuleCategory
+
+	column Severity
+		dataType: string
+		sourceColumn: Severity
+
+	column Expected
+		dataType: string
+		sourceColumn: Expected
+
+	column Actual
+		dataType: string
+		sourceColumn: Actual
+
+	column Result
+		dataType: string
+		sourceColumn: Result
+
+	column CheckedAt
+		dataType: dateTime
+		sourceColumn: CheckedAt
+
+	partition 'Validation Results' = m
+		mode: import
+		source =
+			let
+				Source = Sql.Database("xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "WH_Finance_Gold"),
+				Data = Source{[Schema="audit", Item="ValidationLog"]}[Data]
+			in
+				Data
