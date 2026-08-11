@@ -17,11 +17,9 @@ table Watermarks
 		dataType: dateTime
 		sourceColumn: LastUpdatedUtc
 
-	partition Watermarks = m
-		mode: import
-		source =
-			let
-				Source = Sql.Database("xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "WH_Finance_Gold"),
-				Data = Source{[Schema="control", Item="Watermark"]}[Data]
-			in
-				Data
+	partition Watermarks = entity
+		mode: directLake
+		source
+			entityName: Watermark
+			schemaName: control
+			expressionSource: 'DL_WH_Finance_Gold'

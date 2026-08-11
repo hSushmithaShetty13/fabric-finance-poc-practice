@@ -1,10 +1,18 @@
-relationship 'Pipeline Runs to Source Config'
-	fromColumn: 'Pipeline Runs'.EntityName
-	toColumn: 'Source Config'.EntityName
+relationship 'Activity Runs to Pipeline Runs'
+	fromColumn: 'Activity Runs'.PipelineRunId
+	toColumn: 'Pipeline Runs'.RunId
 
-relationship 'Validation Results to Pipeline Runs'
-	fromColumn: 'Validation Results'.PipelineRunId
-	toColumn: 'Pipeline Runs'.PipelineRunId
+relationship 'Data Quality to Pipeline Runs'
+	fromColumn: 'Data Quality'.PipelineRunId
+	toColumn: 'Pipeline Runs'.RunId
+
+relationship 'Reconciliation to Pipeline Runs'
+	fromColumn: Reconciliation.PipelineRunId
+	toColumn: 'Pipeline Runs'.RunId
+
+relationship 'Reconciliation to Source Config'
+	fromColumn: Reconciliation.EntityName
+	toColumn: 'Source Config'.EntityName
 
 relationship 'Watermarks to Source Config'
 	fromColumn: Watermarks.EntityName

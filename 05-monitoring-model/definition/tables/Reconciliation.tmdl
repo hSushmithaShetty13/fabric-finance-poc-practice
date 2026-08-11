@@ -1,0 +1,62 @@
+table Reconciliation
+
+	column ReconciliationId
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: ReconciliationId
+
+	column PipelineRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: PipelineRunId
+
+	column EntityName
+		dataType: string
+		sourceColumn: EntityName
+
+	column SourceRowCount
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: SourceRowCount
+
+	column TargetRowCount
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: TargetRowCount
+
+	column RejectedRowCount
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: RejectedRowCount
+
+	column VarianceRows
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: VarianceRows
+
+	column VariancePct
+		dataType: decimal
+		summarizeBy: average
+		sourceColumn: VariancePct
+
+	column TolerancePct
+		dataType: decimal
+		summarizeBy: average
+		sourceColumn: TolerancePct
+
+	column Passed
+		dataType: boolean
+		sourceColumn: Passed
+
+	column CheckedAtUtc
+		dataType: dateTime
+		sourceColumn: CheckedAtUtc
+
+	partition Reconciliation = entity
+		mode: directLake
+		source
+			entityName: Reconciliation
+			schemaName: audit
+			expressionSource: 'DL_WH_Finance_Gold'

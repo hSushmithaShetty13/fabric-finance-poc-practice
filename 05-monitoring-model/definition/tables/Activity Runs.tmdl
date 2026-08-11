@@ -1,0 +1,97 @@
+table 'Activity Runs'
+
+	measure 'Average Activity Duration Seconds' = AVERAGE('Activity Runs'[DurationSeconds])
+		formatString: #,##0.0
+
+	measure 'Total Rows Read' = SUM('Activity Runs'[RowsRead])
+		formatString: #,##0
+
+	measure 'Total Rows Written' = SUM('Activity Runs'[RowsWritten])
+		formatString: #,##0
+
+	column ActivityRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: ActivityRunId
+
+	column PipelineRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: PipelineRunId
+
+	column PipelineName
+		dataType: string
+		sourceColumn: PipelineName
+
+	column ActivityName
+		dataType: string
+		sourceColumn: ActivityName
+
+	column ActivityType
+		dataType: string
+		sourceColumn: ActivityType
+
+	column EntityName
+		dataType: string
+		sourceColumn: EntityName
+
+	column Layer
+		dataType: string
+		sourceColumn: Layer
+
+	column StartTimeUtc
+		dataType: dateTime
+		sourceColumn: StartTimeUtc
+
+	column EndTimeUtc
+		dataType: dateTime
+		sourceColumn: EndTimeUtc
+
+	column DurationSeconds
+		dataType: int64
+		isHidden
+		summarizeBy: average
+		sourceColumn: DurationSeconds
+
+	column Status
+		dataType: string
+		sourceColumn: Status
+
+	column RowsRead
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: RowsRead
+
+	column RowsWritten
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: RowsWritten
+
+	column RowsRejected
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: RowsRejected
+
+	column ErrorCode
+		dataType: string
+		sourceColumn: ErrorCode
+
+	column ErrorMessage
+		dataType: string
+		sourceColumn: ErrorMessage
+
+	column LoggedAtUtc
+		dataType: dateTime
+		sourceColumn: LoggedAtUtc
+
+	partition 'Activity Runs' = entity
+		mode: directLake
+		source
+			entityName: ActivityRun
+			schemaName: audit
+			expressionSource: 'DL_WH_Finance_Gold'

@@ -1,0 +1,59 @@
+table 'Data Quality'
+
+	measure 'DQ Failure Rows' = SUM('Data Quality'[RowsFailed])
+		formatString: #,##0
+
+	measure 'DQ Rules Triggered' = DISTINCTCOUNT('Data Quality'[RuleCode])
+		formatString: #,##0
+
+	measure 'Rejected Row Rate %' = DIVIDE([DQ Failure Rows], [Total Rows Processed])
+		formatString: 0.00%
+
+	column DataQualityId
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: DataQualityId
+
+	column PipelineRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: PipelineRunId
+
+	column EntityName
+		dataType: string
+		sourceColumn: EntityName
+
+	column RuleCode
+		dataType: string
+		sourceColumn: RuleCode
+
+	column RuleDescription
+		dataType: string
+		sourceColumn: RuleDescription
+
+	column Severity
+		dataType: string
+		sourceColumn: Severity
+
+	column RowsFailed
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: RowsFailed
+
+	column RejectTable
+		dataType: string
+		sourceColumn: RejectTable
+
+	column CheckedAtUtc
+		dataType: dateTime
+		sourceColumn: CheckedAtUtc
+
+	partition 'Data Quality' = entity
+		mode: directLake
+		source
+			entityName: DataQuality
+			schemaName: audit
+			expressionSource: 'DL_WH_Finance_Gold'

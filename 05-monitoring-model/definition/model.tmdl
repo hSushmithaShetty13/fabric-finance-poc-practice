@@ -3,11 +3,21 @@ model Model
 	defaultPowerBIDataSourceVersion: powerBI_V3
 	discourageImplicitMeasures
 
+expression 'DL_WH_Finance_Gold' =
+		let
+			Source = AzureStorage.DataLake("https://onelake.dfs.fabric.microsoft.com/ad5bf890-cd6e-4786-b69c-15876240823d/d88b4acf-a3ee-4568-aa66-8403b6b9ceaa", [HierarchicalNavigation=true])
+		in
+			Source
+
 ref table 'Pipeline Runs'
-ref table 'Validation Results'
+ref table 'Activity Runs'
+ref table 'Data Quality'
+ref table Reconciliation
 ref table 'Source Config'
 ref table Watermarks
 
-ref relationship 'Pipeline Runs to Source Config'
-ref relationship 'Validation Results to Pipeline Runs'
+ref relationship 'Activity Runs to Pipeline Runs'
+ref relationship 'Data Quality to Pipeline Runs'
+ref relationship 'Reconciliation to Pipeline Runs'
+ref relationship 'Reconciliation to Source Config'
 ref relationship 'Watermarks to Source Config'

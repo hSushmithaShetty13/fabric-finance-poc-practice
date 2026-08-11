@@ -1,78 +1,78 @@
 // Finance Operations Monitoring semantic model measures
 // Tables expected in the model:
-// - pipeline_run
-// - activity_run
-// - data_quality
-// - reconciliation
-// - control.watermark or Watermarks
+// - Pipeline Runs (Direct Lake over audit.PipelineRun)
+// - Activity Runs (Direct Lake over audit.ActivityRun)
+// - Data Quality (Direct Lake over audit.DataQuality)
+// - Reconciliation (Direct Lake over audit.Reconciliation)
+// - Watermarks (Direct Lake over control.Watermark)
 
 Success Rate % =
 DIVIDE(
     CALCULATE(
-        COUNTROWS('pipeline_run'),
-        'pipeline_run'[status] = "Succeeded"
+        COUNTROWS('Pipeline Runs'),
+        'Pipeline Runs'[Status] = "Succeeded"
     ),
-    COUNTROWS('pipeline_run')
+    COUNTROWS('Pipeline Runs')
 )
 
 Runs Today =
 CALCULATE(
-    COUNTROWS('pipeline_run'),
+    COUNTROWS('Pipeline Runs'),
     FILTER(
-        'pipeline_run',
-        DATEVALUE('pipeline_run'[start_time_utc]) = TODAY()
+        'Pipeline Runs',
+        DATEVALUE('Pipeline Runs'[StartTimeUtc]) = TODAY()
     )
 )
 
 Failed Runs =
 CALCULATE(
-    COUNTROWS('pipeline_run'),
-    'pipeline_run'[status] = "Failed"
+    COUNTROWS('Pipeline Runs'),
+    'Pipeline Runs'[Status] = "Failed"
 )
 
 In Progress Runs =
 CALCULATE(
-    COUNTROWS('pipeline_run'),
-    'pipeline_run'[status] = "Running"
-        || 'pipeline_run'[status] = "InProgress"
-        || 'pipeline_run'[status] = "Started"
+    COUNTROWS('Pipeline Runs'),
+    'Pipeline Runs'[Status] = "Running"
+        || 'Pipeline Runs'[Status] = "InProgress"
+        || 'Pipeline Runs'[Status] = "Started"
 )
 
 Total Rows Read =
-SUM('activity_run'[rows_read])
+SUM('Activity Runs'[RowsRead])
 
 Total Rows Written =
-SUM('activity_run'[rows_written])
+SUM('Activity Runs'[RowsWritten])
 
 Total Rows Processed =
-SUM('reconciliation'[silver_count])
+SUM('Reconciliation'[TargetRowCount])
 
 Total Rows Rejected =
-SUM('data_quality'[rows_failed])
+SUM('Data Quality'[RowsFailed])
 
 Average Duration Seconds =
-AVERAGE('pipeline_run'[duration_sec])
+AVERAGE('Pipeline Runs'[DurationSeconds])
 
 Average Activity Duration Seconds =
-AVERAGE('activity_run'[duration_sec])
+AVERAGE('Activity Runs'[DurationSeconds])
 
 Reconciliation Variance % =
 DIVIDE(
-    SUM('reconciliation'[variance_rows]),
-    SUM('reconciliation'[bronze_count])
+    SUM('Reconciliation'[VarianceRows]),
+    SUM('Reconciliation'[SourceRowCount])
 )
 
 Reconciliation Breaches =
 CALCULATE(
-    COUNTROWS('reconciliation'),
-    'reconciliation'[passed] = FALSE()
+    COUNTROWS('Reconciliation'),
+    'Reconciliation'[Passed] = FALSE()
 )
 
 DQ Failure Rows =
-SUM('data_quality'[rows_failed])
+SUM('Data Quality'[RowsFailed])
 
 DQ Rules Triggered =
-DISTINCTCOUNT('data_quality'[rule_code])
+DISTINCTCOUNT('Data Quality'[RuleCode])
 
 Rejected Row Rate % =
 DIVIDE(
@@ -82,8 +82,8 @@ DIVIDE(
 
 Gold Validation Failures =
 CALCULATE(
-    COUNTROWS('data_quality'),
-    CONTAINSSTRING('data_quality'[rule_code], "Gold")
+    COUNTROWS('Data Quality'),
+    CONTAINSSTRING('Data Quality'[RuleCode], "Gold")
 )
 
 Pipeline Health Status =

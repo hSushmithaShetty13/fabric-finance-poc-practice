@@ -1,6 +1,5 @@
 table 'Pipeline Runs'
 
-	/// Percentage of logged runs that succeeded.
 	measure 'Success Rate %' =
 		DIVIDE(
 			CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Succeeded"),
@@ -8,44 +7,37 @@ table 'Pipeline Runs'
 		)
 		formatString: 0.00%
 
-	/// Number of pipeline runs that started today.
 	measure 'Runs Today' =
-		CALCULATE(
-			COUNTROWS('Pipeline Runs'),
-			FILTER('Pipeline Runs', DATEVALUE('Pipeline Runs'[StartTime]) = TODAY())
-		)
+		CALCULATE(COUNTROWS('Pipeline Runs'), FILTER('Pipeline Runs', DATEVALUE('Pipeline Runs'[StartTimeUtc]) = TODAY()))
 		formatString: #,##0
 
-	/// Rows written to downstream targets.
-	measure 'Total Rows Processed' = SUM('Pipeline Runs'[TargetRowCount])
+	measure 'Failed Runs' = CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Failed")
 		formatString: #,##0
 
-	/// Rows classified as rejected by Silver processing.
-	measure 'Total Rows Rejected' = SUM('Pipeline Runs'[RejectedRowCount])
-		formatString: #,##0
-
-	/// Average elapsed time for completed runs.
 	measure 'Average Duration Seconds' = AVERAGE('Pipeline Runs'[DurationSeconds])
 		formatString: #,##0.0
 
-	/// Percentage variance between source and target counts.
-	measure 'Reconciliation Variance %' =
-		DIVIDE(
-			ABS(SUM('Pipeline Runs'[SourceRowCount]) - SUM('Pipeline Runs'[TargetRowCount])),
-			SUM('Pipeline Runs'[SourceRowCount])
-		)
-		formatString: 0.00%
-
-	/// Number of logged validation failures.
-	measure 'Validation Failures' =
-		CALCULATE(COUNTROWS('Validation Results'), 'Validation Results'[Result] = "Fail")
+	measure 'Total Rows Processed' = SUM(Reconciliation[TargetRowCount])
 		formatString: #,##0
 
-	column PipelineRunId
+	measure 'Total Rows Rejected' = SUM('Data Quality'[RowsFailed])
+		formatString: #,##0
+
+	measure 'Reconciliation Variance %' = DIVIDE(SUM(Reconciliation[VarianceRows]), SUM(Reconciliation[SourceRowCount]))
+		formatString: 0.00%
+
+	measure 'Reconciliation Breaches' = CALCULATE(COUNTROWS(Reconciliation), Reconciliation[Passed] = FALSE())
+		formatString: #,##0
+
+	measure 'Pipeline Health Status' =
+		SWITCH(TRUE(), [Failed Runs] > 0, "Failed", [Reconciliation Breaches] > 0, "Needs Review", [Total Rows Rejected] > 0, "DQ Findings", "Healthy")
+		formatString: @
+
+	column RunId
 		dataType: string
 		isHidden
 		summarizeBy: none
-		sourceColumn: PipelineRunId
+		sourceColumn: RunId
 
 	column ParentRunId
 		dataType: string
@@ -77,40 +69,23 @@ table 'Pipeline Runs'
 		dataType: dateTime
 		sourceColumn: RunDate
 
-	column StartTime
+	column StartTimeUtc
 		dataType: dateTime
-		sourceColumn: StartTime
+		sourceColumn: StartTimeUtc
 
-	column EndTime
+	column EndTimeUtc
 		dataType: dateTime
-		sourceColumn: EndTime
+		sourceColumn: EndTimeUtc
 
 	column DurationSeconds
 		dataType: int64
+		isHidden
 		summarizeBy: average
 		sourceColumn: DurationSeconds
 
 	column Status
 		dataType: string
 		sourceColumn: Status
-
-	column SourceRowCount
-		dataType: int64
-		isHidden
-		summarizeBy: sum
-		sourceColumn: SourceRowCount
-
-	column TargetRowCount
-		dataType: int64
-		isHidden
-		summarizeBy: sum
-		sourceColumn: TargetRowCount
-
-	column RejectedRowCount
-		dataType: int64
-		isHidden
-		summarizeBy: sum
-		sourceColumn: RejectedRowCount
 
 	column ErrorMessage
 		dataType: string
@@ -120,15 +95,13 @@ table 'Pipeline Runs'
 		dataType: string
 		sourceColumn: TriggeredBy
 
-	column LoggedAt
+	column LoggedAtUtc
 		dataType: dateTime
-		sourceColumn: LoggedAt
+		sourceColumn: LoggedAtUtc
 
-	partition 'Pipeline Runs' = m
-		mode: import
-		source =
-			let
-				Source = Sql.Database("xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "WH_Finance_Gold"),
-				Data = Source{[Schema="audit", Item="PipelineRunLog"]}[Data]
-			in
-				Data
+	partition 'Pipeline Runs' = entity
+		mode: directLake
+		source
+			entityName: PipelineRun
+			schemaName: audit
+			expressionSource: 'DL_WH_Finance_Gold'
