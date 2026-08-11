@@ -162,4 +162,45 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE audit.sp_log_activity
+    @run_id VARCHAR(100), @activity_run_id VARCHAR(100), @pipeline_name VARCHAR(200),
+    @activity_name VARCHAR(200), @activity_type VARCHAR(100), @entity_name VARCHAR(100) = NULL,
+    @layer VARCHAR(30) = NULL, @start_time_utc DATETIME2(3), @end_time_utc DATETIME2(3) = NULL,
+    @status VARCHAR(20), @rows_read BIGINT = NULL, @rows_written BIGINT = NULL,
+    @rows_rejected BIGINT = NULL, @rows_skipped BIGINT = NULL, @error_code VARCHAR(100) = NULL,
+    @error_message VARCHAR(4000) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    EXEC audit.SP_LogDedicatedActivity @ActivityRunId=@activity_run_id,@PipelineRunId=@run_id,
+        @PipelineName=@pipeline_name,@ActivityName=@activity_name,@ActivityType=@activity_type,
+        @EntityName=@entity_name,@Layer=@layer,@StartTimeUtc=@start_time_utc,@EndTimeUtc=@end_time_utc,
+        @Status=@status,@RowsRead=@rows_read,@RowsWritten=@rows_written,@RowsRejected=@rows_rejected,
+        @ErrorCode=@error_code,@ErrorMessage=@error_message;
+END
+GO
+
+CREATE OR ALTER PROCEDURE audit.sp_log_dq
+    @run_id VARCHAR(100), @entity_name VARCHAR(100), @rule_code VARCHAR(200),
+    @rule_description VARCHAR(500), @severity VARCHAR(20), @rows_failed BIGINT,
+    @reject_table VARCHAR(200) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    EXEC audit.SP_LogDataQuality @PipelineRunId=@run_id,@EntityName=@entity_name,@RuleCode=@rule_code,
+        @RuleDescription=@rule_description,@Severity=@severity,@RowsFailed=@rows_failed,@RejectTable=@reject_table;
+END
+GO
+
+CREATE OR ALTER PROCEDURE audit.sp_log_reconciliation
+    @run_id VARCHAR(100), @entity_name VARCHAR(100), @bronze_count BIGINT,
+    @silver_count BIGINT, @gold_count BIGINT = NULL, @tolerance_pct DECIMAL(18,4)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    EXEC audit.SP_LogReconciliation @PipelineRunId=@run_id,@EntityName=@entity_name,
+        @SourceRowCount=@bronze_count,@TargetRowCount=@silver_count,@RejectedRowCount=0;
+END
+GO
+
 PRINT 'Dedicated audit tables and procedures created.';
