@@ -1,0 +1,96 @@
+// Finance Operations Monitoring semantic model measures
+// Tables expected in the model:
+// - pipeline_run
+// - activity_run
+// - data_quality
+// - reconciliation
+// - control.watermark or Watermarks
+
+Success Rate % =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS('pipeline_run'),
+        'pipeline_run'[status] = "Succeeded"
+    ),
+    COUNTROWS('pipeline_run')
+)
+
+Runs Today =
+CALCULATE(
+    COUNTROWS('pipeline_run'),
+    FILTER(
+        'pipeline_run',
+        DATEVALUE('pipeline_run'[start_time_utc]) = TODAY()
+    )
+)
+
+Failed Runs =
+CALCULATE(
+    COUNTROWS('pipeline_run'),
+    'pipeline_run'[status] = "Failed"
+)
+
+In Progress Runs =
+CALCULATE(
+    COUNTROWS('pipeline_run'),
+    'pipeline_run'[status] = "Running"
+        || 'pipeline_run'[status] = "InProgress"
+        || 'pipeline_run'[status] = "Started"
+)
+
+Total Rows Read =
+SUM('activity_run'[rows_read])
+
+Total Rows Written =
+SUM('activity_run'[rows_written])
+
+Total Rows Processed =
+SUM('reconciliation'[silver_count])
+
+Total Rows Rejected =
+SUM('data_quality'[rows_failed])
+
+Average Duration Seconds =
+AVERAGE('pipeline_run'[duration_sec])
+
+Average Activity Duration Seconds =
+AVERAGE('activity_run'[duration_sec])
+
+Reconciliation Variance % =
+DIVIDE(
+    SUM('reconciliation'[variance_rows]),
+    SUM('reconciliation'[bronze_count])
+)
+
+Reconciliation Breaches =
+CALCULATE(
+    COUNTROWS('reconciliation'),
+    'reconciliation'[passed] = FALSE()
+)
+
+DQ Failure Rows =
+SUM('data_quality'[rows_failed])
+
+DQ Rules Triggered =
+DISTINCTCOUNT('data_quality'[rule_code])
+
+Rejected Row Rate % =
+DIVIDE(
+    [Total Rows Rejected],
+    [Total Rows Processed]
+)
+
+Gold Validation Failures =
+CALCULATE(
+    COUNTROWS('data_quality'),
+    CONTAINSSTRING('data_quality'[rule_code], "Gold")
+)
+
+Pipeline Health Status =
+SWITCH(
+    TRUE(),
+    [Failed Runs] > 0, "Failed",
+    [Reconciliation Breaches] > 0, "Needs Review",
+    [DQ Failure Rows] > 0, "DQ Findings",
+    "Healthy"
+)

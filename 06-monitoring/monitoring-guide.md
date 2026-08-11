@@ -345,6 +345,9 @@ DIVIDE(
 
 ## 9. Alerting options
 
+For concrete Warehouse source queries, rule settings, message templates, and smoke-test SQL, see
+[fabric-activator-setup.md](fabric-activator-setup.md).
+
 ### Fabric portal alerting
 
 For a customer demo, use the Fabric portal's monitoring experience to configure an alert from a

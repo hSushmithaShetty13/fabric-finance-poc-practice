@@ -53,6 +53,7 @@ practice-repo/
 │   └── exports/                        ← the exact, working pipeline-content.json for all 4 pipelines
 ├── 06-monitoring/
 │   ├── monitoring-guide.md             ← Monitoring hub, audit SQL, reconciliation, alerts
+│   ├── fabric-activator-setup.md       ← Warehouse-query based Activator rules
 │   └── lessons-learned.md              ← every real bug we hit + the fix (read this before you start!)
 └── 07-demo-script/
     └── demo-runbook.md                 ← step-by-step rebuild + live-demo runbook
@@ -113,6 +114,11 @@ pipeline changes needed.
 6. **Verify** — query `audit.PipelineRunLog` and `audit.ValidationLog` in `WH_Finance_Gold`.
 7. **Monitor it** — follow [06-monitoring/monitoring-guide.md](06-monitoring/monitoring-guide.md)
   for Monitoring hub, audit queries, reconciliation, troubleshooting, and alerting options.
+8. **Build the Power BI dashboard** — use
+  [05-monitoring-model/powerbi-dashboard-build-guide.md](05-monitoring-model/powerbi-dashboard-build-guide.md)
+  and [05-monitoring-model/monitoring-measures.dax](05-monitoring-model/monitoring-measures.dax).
+9. **Configure alerts** — use
+  [06-monitoring/fabric-activator-setup.md](06-monitoring/fabric-activator-setup.md).
 
 **Read [06-monitoring/lessons-learned.md](06-monitoring/lessons-learned.md) before you start** — it
 documents every real error we hit (SQL-endpoint metadata sync lag, trigger-parameter serialization,
