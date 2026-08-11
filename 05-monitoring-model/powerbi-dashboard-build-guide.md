@@ -1,7 +1,8 @@
 # Power BI Monitoring Dashboard Build Guide
 
 Build this report in the same workspace as the PoC (`WS_Finance_POC`) using the semantic model
-`Finance Operations Monitoring` in **Direct Lake** mode over the physical Warehouse tables:
+`Finance Operations Monitoring Direct Lake` (`a1258c49-b4ba-4612-9034-c45ad1401857`) in
+**Direct Lake** mode over the physical Warehouse tables:
 
 - `audit.PipelineRun`
 - `audit.ActivityRun`

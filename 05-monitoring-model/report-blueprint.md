@@ -1,6 +1,7 @@
 # Finance Operations Monitoring — Direct Lake Report Blueprint
 
-Semantic model: `Finance Operations Monitoring`
+Semantic model: `Finance Operations Monitoring Direct Lake`
+Model ID: `a1258c49-b4ba-4612-9034-c45ad1401857`
 Storage mode: Direct Lake
 
 Use physical Warehouse tables as the Direct Lake source:
