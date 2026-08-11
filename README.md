@@ -52,6 +52,7 @@ practice-repo/
 │   ├── run-pipeline.ps1                ← generic "trigger a pipeline run" script
 │   └── exports/                        ← the exact, working pipeline-content.json for all 4 pipelines
 ├── 06-monitoring/
+│   ├── monitoring-guide.md             ← Monitoring hub, audit SQL, reconciliation, alerts
 │   └── lessons-learned.md              ← every real bug we hit + the fix (read this before you start!)
 └── 07-demo-script/
     └── demo-runbook.md                 ← step-by-step rebuild + live-demo runbook
@@ -110,6 +111,8 @@ pipeline changes needed.
 5. **Run it** — trigger `PL_MASTER_ORCHESTRATOR` via [run-pipeline.ps1](04-pipelines/run-pipeline.ps1)
    with `{"p_load_type":"Full","p_run_date":"<today>"}`.
 6. **Verify** — query `audit.PipelineRunLog` and `audit.ValidationLog` in `WH_Finance_Gold`.
+7. **Monitor it** — follow [06-monitoring/monitoring-guide.md](06-monitoring/monitoring-guide.md)
+  for Monitoring hub, audit queries, reconciliation, troubleshooting, and alerting options.
 
 **Read [06-monitoring/lessons-learned.md](06-monitoring/lessons-learned.md) before you start** — it
 documents every real error we hit (SQL-endpoint metadata sync lag, trigger-parameter serialization,
