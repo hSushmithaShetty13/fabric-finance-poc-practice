@@ -227,6 +227,43 @@ check row counts rather than relying only on the pipeline job status.
 
 ## 7. Failure monitoring and troubleshooting
 
+## 7a. Granular activity-run monitoring
+
+The pipelines now write dedicated rows to `audit.ActivityRun` for the key activity boundaries:
+
+| Pipeline | Activity rows currently logged |
+|---|---|
+| `PL_BRONZE_INGEST` | `PipelineStart`, `LKP_Config`, `Copy_Bronze`, `PipelineEnd` |
+| `PL_SILVER_LOAD` | `PipelineStart`, `Copy_Bronze_To_Silver`, `SCR_Classify_Rejects`, `PipelineEnd` |
+| `PL_GOLD_LOAD` | `PipelineStart`, `SP_Upsert_DimCustomer`, `SP_Upsert_DimGLAccount`, `SP_Load_FactRevenue`, `PipelineEnd` |
+
+Example query:
+
+```sql
+SELECT PipelineRunId,
+       PipelineName,
+       ActivityName,
+       ActivityType,
+       EntityName,
+       Layer,
+       [Status],
+       RowsRead,
+       RowsWritten,
+       RowsRejected,
+       StartTimeUtc,
+       EndTimeUtc,
+       DurationSeconds,
+       ErrorMessage
+FROM audit.ActivityRun
+ORDER BY LoggedAtUtc DESC;
+```
+
+This level is intentionally focused on meaningful operational units: Lookup config resolution,
+Copy movement, DQ classification, and Gold stored-procedure work. You can extend the same
+`audit.sp_log_activity` pattern to also log `Wait` and `ExecutePipeline` wrapper activities if you
+want every single canvas node represented, but the current setup already supports practical
+debugging of row movement, DQ classification, and Gold processing.
+
 ### Failure branch behavior
 
 Each child pipeline has the following pattern:
