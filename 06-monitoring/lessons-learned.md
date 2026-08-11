@@ -129,3 +129,19 @@ parameter blocks per pipeline stage. Moving that configuration into `control.Sou
 a `LKP_Config` Lookup inside `PL_BRONZE_INGEST`/`PL_SILVER_LOAD`) means the master orchestrator only
 needs to pass `p_entity_name` + run-control parameters per child — much shorter, and adding a 7th
 entity requires **zero** pipeline changes, just one new row in `control.SourceConfig`.
+
+## 9. Don't use `LoadMode='Incremental'` (Append) without real watermark filtering
+
+`control.SourceConfig.LoadMode` drives `Copy_Bronze`'s `tableActionOption`
+(`Full`→`Overwrite`, `Incremental`→`Append`) in `PL_BRONZE_INGEST`. If you mark an entity
+`Incremental` but the pipeline doesn't actually filter the source CSV by a watermark (this repo's
+`Copy_Bronze` copies the *entire* CSV every time, unfiltered), every re-run **appends the same
+rows again** — row counts multiply by the number of times you've run it (we caught this when
+`Payments` grew from 831 to 3,324 rows — exactly 4× — after 4 test runs). **This repo sets
+`LoadMode='Full'` for every entity** to keep re-runs idempotent, since the generated CSVs are
+static snapshots, not genuinely incremental daily extracts. If you want true incremental loading,
+you'll need to add a `WHERE <WatermarkColumn> > @LastWatermarkValue` filter to the Copy source
+(e.g. via a `LKP_Watermark` Lookup against `control.Watermark`) and update the watermark after a
+successful load — `control.SP_UpdateWatermark` in this repo's SQL is the starting point for that,
+but is not currently wired into any pipeline.
+
