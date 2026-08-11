@@ -61,6 +61,61 @@
         }
       },
       {
+        "name": "AUDIT_LKP_Config_Success",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "LKP_Config", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "storedProcedureName": "[audit].[sp_log_activity]",
+          "storedProcedureParameters": {
+            "run_id": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "activity_run_id": { "value": "@concat(pipeline().parameters.p_run_id, '-lkp')", "type": "String" },
+            "pipeline_name": { "value": "PL_BRONZE_INGEST", "type": "String" },
+            "activity_name": { "value": "LKP_Config", "type": "String" },
+            "activity_type": { "value": "Lookup", "type": "String" },
+            "entity_name": { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "layer": { "value": "Bronze", "type": "String" },
+            "start_time_utc": { "value": { "value": "@activity('LKP_Config').ExecutionStartTime", "type": "Expression" }, "type": "String" },
+            "end_time_utc": { "value": { "value": "@activity('LKP_Config').ExecutionEndTime", "type": "Expression" }, "type": "String" },
+            "status": { "value": "Succeeded", "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "AUDIT_LKP_Config_Failure",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "LKP_Config", "dependencyConditions": ["Failed"] } ],
+        "typeProperties": {
+          "storedProcedureName": "[audit].[sp_log_activity]",
+          "storedProcedureParameters": {
+            "run_id": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "activity_run_id": { "value": "@concat(pipeline().parameters.p_run_id, '-lkp')", "type": "String" },
+            "pipeline_name": { "value": "PL_BRONZE_INGEST", "type": "String" },
+            "activity_name": { "value": "LKP_Config", "type": "String" },
+            "activity_type": { "value": "Lookup", "type": "String" },
+            "entity_name": { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "layer": { "value": "Bronze", "type": "String" },
+            "start_time_utc": { "value": { "value": "@activity('LKP_Config').ExecutionStartTime", "type": "Expression" }, "type": "String" },
+            "end_time_utc": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "String" },
+            "status": { "value": "Failed", "type": "String" },
+            "error_message": { "value": { "value": "@string(activity('LKP_Config').Error.message)", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
         "name": "Copy_Bronze",
         "type": "Copy",
         "dependsOn": [ { "activity": "LKP_Config", "dependencyConditions": ["Succeeded"] } ],
@@ -119,7 +174,7 @@
       {
         "name": "SP_Log_End_Success",
         "type": "SqlServerStoredProcedure",
-        "dependsOn": [ { "activity": "Copy_Bronze", "dependencyConditions": ["Succeeded"] } ],
+        "dependsOn": [ { "activity": "AUDIT_Copy_Bronze_Success", "dependencyConditions": ["Succeeded"] } ],
         "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
         "typeProperties": {
           "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
@@ -139,9 +194,67 @@
         }
       },
       {
-        "name": "SP_Log_End_Failure",
+        "name": "AUDIT_Copy_Bronze_Success",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "Copy_Bronze", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "storedProcedureName": "[audit].[sp_log_activity]",
+          "storedProcedureParameters": {
+            "run_id": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "activity_run_id": { "value": "@concat(pipeline().parameters.p_run_id, '-copy')", "type": "String" },
+            "pipeline_name": { "value": "PL_BRONZE_INGEST", "type": "String" },
+            "activity_name": { "value": "Copy_Bronze", "type": "String" },
+            "activity_type": { "value": "Copy", "type": "String" },
+            "entity_name": { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "layer": { "value": "Bronze", "type": "String" },
+            "start_time_utc": { "value": { "value": "@activity('Copy_Bronze').ExecutionStartTime", "type": "Expression" }, "type": "String" },
+            "end_time_utc": { "value": { "value": "@activity('Copy_Bronze').ExecutionEndTime", "type": "Expression" }, "type": "String" },
+            "status": { "value": "Succeeded", "type": "String" },
+            "rows_read": { "value": { "value": "@activity('Copy_Bronze').output.rowsRead", "type": "Expression" }, "type": "Int64" },
+            "rows_written": { "value": { "value": "@activity('Copy_Bronze').output.rowsCopied", "type": "Expression" }, "type": "Int64" },
+            "rows_rejected": { "value": 0, "type": "Int64" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "AUDIT_Copy_Bronze_Failure",
         "type": "SqlServerStoredProcedure",
         "dependsOn": [ { "activity": "Copy_Bronze", "dependencyConditions": ["Failed"] } ],
+        "typeProperties": {
+          "storedProcedureName": "[audit].[sp_log_activity]",
+          "storedProcedureParameters": {
+            "run_id": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "activity_run_id": { "value": "@concat(pipeline().parameters.p_run_id, '-copy')", "type": "String" },
+            "pipeline_name": { "value": "PL_BRONZE_INGEST", "type": "String" },
+            "activity_name": { "value": "Copy_Bronze", "type": "String" },
+            "activity_type": { "value": "Copy", "type": "String" },
+            "entity_name": { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "layer": { "value": "Bronze", "type": "String" },
+            "start_time_utc": { "value": { "value": "@activity('Copy_Bronze').ExecutionStartTime", "type": "Expression" }, "type": "String" },
+            "end_time_utc": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "String" },
+            "status": { "value": "Failed", "type": "String" },
+            "error_message": { "value": { "value": "@string(activity('Copy_Bronze').Error.message)", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Log_End_Failure",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "AUDIT_Copy_Bronze_Failure", "dependencyConditions": ["Succeeded"] } ],
         "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
         "typeProperties": {
           "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
