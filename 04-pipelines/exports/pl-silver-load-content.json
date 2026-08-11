@@ -1,0 +1,251 @@
+{
+  "properties": {
+    "description": "PL_SILVER_LOAD - Copy Bronze->Silver Delta table in LH_Finance, then classify+quarantine DQ-violating rows into silver_rejects.<Entity> in WH_Finance_Gold via cross-database T-SQL, with audit + row-count logging.",
+    "activities": [
+      {
+        "name": "SP_Log_Start",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineStart]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "ParentRunId":   { "value": { "value": "@pipeline().parameters.p_parent_run_id", "type": "Expression" }, "type": "String" },
+            "PipelineName":  { "value": "PL_SILVER_LOAD", "type": "String" },
+            "Environment":   { "value": "POC", "type": "String" },
+            "LoadType":      { "value": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "SourceSystem":  { "value": "LH_Finance.Bronze", "type": "String" },
+            "RunDate":       { "value": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }, "type": "String" },
+            "TriggeredBy":   { "value": "PL_MASTER_ORCHESTRATOR", "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "LKP_Config",
+        "type": "Lookup",
+        "dependsOn": [ { "activity": "SP_Log_Start", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "source": {
+            "type": "DataWarehouseSource",
+            "sqlReaderQuery": {
+              "value": "@concat('SELECT BronzeTable, SilverTable, RejectPredicate, RejectColumns FROM control.SourceConfig WHERE EntityName = ''', pipeline().parameters.p_entity_name, '''')",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "datasetSettings": {
+            "annotations": [],
+            "type": "DataWarehouseTable",
+            "schema": [],
+            "typeProperties": {},
+            "linkedService": {
+              "name": "WH_Finance_Gold",
+              "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+                "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+                "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+                "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+            }
+          },
+          "firstRowOnly": true
+        }
+      },
+      {
+        "name": "Copy_Bronze_To_Silver",
+        "type": "Copy",
+        "dependsOn": [ { "activity": "LKP_Config", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "source": {
+            "type": "LakehouseTableSource",
+            "datasetSettings": {
+              "annotations": [],
+              "type": "LakehouseTable",
+              "typeProperties": { "table": { "value": "@activity('LKP_Config').output.firstRow.BronzeTable", "type": "Expression" } },
+              "schema": [],
+              "linkedService": {
+                "name": "LH_Finance",
+                "properties": { "annotations": [], "type": "Lakehouse", "typeProperties": {
+                  "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d",
+                  "artifactId": "3dfe3fbe-4f9d-4ca2-ab91-f589b7f77533" } }
+              }
+            }
+          },
+          "sink": {
+            "type": "LakehouseTableSink",
+            "tableActionOption": "Overwrite",
+            "datasetSettings": {
+              "annotations": [],
+              "type": "LakehouseTable",
+              "typeProperties": { "table": { "value": "@activity('LKP_Config').output.firstRow.SilverTable", "type": "Expression" } },
+              "schema": [],
+              "linkedService": {
+                "name": "LH_Finance",
+                "properties": { "annotations": [], "type": "Lakehouse", "typeProperties": {
+                  "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d",
+                  "artifactId": "3dfe3fbe-4f9d-4ca2-ab91-f589b7f77533" } }
+              }
+            }
+          },
+          "enableStaging": false
+        }
+      },
+      {
+        "name": "Wait_SqlEndpointSync",
+        "type": "Wait",
+        "dependsOn": [ { "activity": "Copy_Bronze_To_Silver", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": { "waitTimeInSeconds": 90 }
+      },
+      {
+        "name": "SCR_Classify_Rejects",
+        "type": "Script",
+        "dependsOn": [ { "activity": "Wait_SqlEndpointSync", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 3, "retryIntervalInSeconds": 45, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "scripts": [
+            {
+              "type": "Query",
+              "text": {
+                "value": "@concat('INSERT INTO silver_rejects.', pipeline().parameters.p_entity_name, ' (RunId, RejectedAtUtc, RuleCode, ', activity('LKP_Config').output.firstRow.RejectColumns, ', RawRow) SELECT ''', pipeline().parameters.p_run_id, ''', SYSUTCDATETIME(), ''DQ_REJECT'', ', activity('LKP_Config').output.firstRow.RejectColumns, ', CONCAT_WS(''|'', ', activity('LKP_Config').output.firstRow.RejectColumns, ') FROM LH_Finance.dbo.', activity('LKP_Config').output.firstRow.BronzeTable, ' WHERE ', activity('LKP_Config').output.firstRow.RejectPredicate, ';')",
+                "type": "Expression"
+              }
+            }
+          ],
+          "scriptBlockExecutionTimeout": "0.02:00:00"
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "LKP_Counts",
+        "type": "Lookup",
+        "dependsOn": [ { "activity": "SCR_Classify_Rejects", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 3, "retryIntervalInSeconds": 45, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "source": {
+            "type": "DataWarehouseSource",
+            "sqlReaderQuery": {
+              "value": "@concat('SELECT (SELECT COUNT(*) FROM LH_Finance.dbo.', activity('LKP_Config').output.firstRow.BronzeTable, ') AS SourceCnt, (SELECT COUNT(*) FROM LH_Finance.dbo.', activity('LKP_Config').output.firstRow.SilverTable, ') AS TargetCnt, (SELECT COUNT(*) FROM silver_rejects.', pipeline().parameters.p_entity_name, ' WHERE RunId=''', pipeline().parameters.p_run_id, ''') AS RejectedCnt;')",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "datasetSettings": {
+            "annotations": [],
+            "type": "DataWarehouseTable",
+            "schema": [],
+            "typeProperties": {},
+            "linkedService": {
+              "name": "WH_Finance_Gold",
+              "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+                "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+                "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+                "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+            }
+          },
+          "firstRowOnly": true
+        }
+      },
+      {
+        "name": "SP_Log_RowCounts",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "LKP_Counts", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogRowCounts]",
+          "storedProcedureParameters": {
+            "PipelineRunId":    { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":       { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "SourceRowCount":   { "value": { "value": "@activity('LKP_Counts').output.firstRow.SourceCnt", "type": "Expression" }, "type": "Int64" },
+            "TargetRowCount":   { "value": { "value": "@activity('LKP_Counts').output.firstRow.TargetCnt", "type": "Expression" }, "type": "Int64" },
+            "RejectedRowCount": { "value": { "value": "@activity('LKP_Counts').output.firstRow.RejectedCnt", "type": "Expression" }, "type": "Int64" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Log_End_Success",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Log_RowCounts", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "Status":        { "value": "Succeeded", "type": "String" },
+            "ErrorMessage":  { "value": "", "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Log_End_Failure",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "Copy_Bronze_To_Silver", "dependencyConditions": ["Failed"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "Status":        { "value": "Failed", "type": "String" },
+            "ErrorMessage":  { "value": { "value": "@string(activity('Copy_Bronze_To_Silver').Error.message)", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "Fail_Silver",
+        "type": "Fail",
+        "dependsOn": [ { "activity": "SP_Log_End_Failure", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "message": { "value": "@concat('Silver load failed for entity: ', pipeline().parameters.p_entity_name)", "type": "Expression" },
+          "errorCode": "SilverLoadFailure"
+        }
+      }
+    ],
+    "parameters": {
+      "p_entity_name":     { "type": "string", "defaultValue": "Customers" },
+      "p_load_type":       { "type": "string", "defaultValue": "Full" },
+      "p_run_id":          { "type": "string", "defaultValue": "" },
+      "p_parent_run_id":   { "type": "string", "defaultValue": "" },
+      "p_run_date":        { "type": "string", "defaultValue": "2026-08-11" }
+    },
+    "annotations": ["Finance", "PoC", "Silver", "PL_SILVER_LOAD"]
+  }
+}

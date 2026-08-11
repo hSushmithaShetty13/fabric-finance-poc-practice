@@ -1,0 +1,224 @@
+{
+  "properties": {
+    "description": "PL_GOLD_LOAD - Upsert Gold dimensions (DimCustomer SCD2, DimGLAccount), load FactRevenue, run Gold validation, with audit + row-count logging.",
+    "activities": [
+      {
+        "name": "SP_Log_Start",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineStart]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "ParentRunId":   { "value": { "value": "@pipeline().parameters.p_parent_run_id", "type": "Expression" }, "type": "String" },
+            "PipelineName":  { "value": "PL_GOLD_LOAD", "type": "String" },
+            "Environment":   { "value": "POC", "type": "String" },
+            "LoadType":      { "value": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": "ALL", "type": "String" },
+            "SourceSystem":  { "value": "LH_Finance.Silver", "type": "String" },
+            "RunDate":       { "value": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }, "type": "String" },
+            "TriggeredBy":   { "value": "PL_MASTER_ORCHESTRATOR", "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Upsert_DimCustomer",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Log_Start", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[gold].[SP_UpsertDimCustomer]",
+          "storedProcedureParameters": {}
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Upsert_DimGLAccount",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Log_Start", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[gold].[SP_UpsertDimGLAccount]",
+          "storedProcedureParameters": {}
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Load_FactRevenue",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [
+          { "activity": "SP_Upsert_DimCustomer", "dependencyConditions": ["Succeeded"] },
+          { "activity": "SP_Upsert_DimGLAccount", "dependencyConditions": ["Succeeded"] }
+        ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[gold].[SP_LoadFactRevenue]",
+          "storedProcedureParameters": {
+            "LoadRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "LoadType":  { "value": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Run_Gold_Validation",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Load_FactRevenue", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_RunGoldValidation]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "LKP_Counts",
+        "type": "Lookup",
+        "dependsOn": [ { "activity": "SP_Run_Gold_Validation", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "source": {
+            "type": "DataWarehouseSource",
+            "sqlReaderQuery": {
+              "value": "@concat('SELECT (SELECT COUNT(*) FROM LH_Finance.dbo.Silver_InvoiceLines) AS SourceCnt, (SELECT COUNT(*) FROM gold.FactRevenue WHERE LoadRunId=''', pipeline().parameters.p_run_id, ''') AS TargetCnt, 0 AS RejectedCnt;')",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "datasetSettings": {
+            "annotations": [],
+            "type": "DataWarehouseTable",
+            "schema": [],
+            "typeProperties": {},
+            "linkedService": {
+              "name": "WH_Finance_Gold",
+              "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+                "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+                "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+                "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+            }
+          },
+          "firstRowOnly": true
+        }
+      },
+      {
+        "name": "SP_Log_RowCounts",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "LKP_Counts", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogRowCounts]",
+          "storedProcedureParameters": {
+            "PipelineRunId":    { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":       { "value": "ALL", "type": "String" },
+            "SourceRowCount":   { "value": { "value": "@activity('LKP_Counts').output.firstRow.SourceCnt", "type": "Expression" }, "type": "Int64" },
+            "TargetRowCount":   { "value": { "value": "@activity('LKP_Counts').output.firstRow.TargetCnt", "type": "Expression" }, "type": "Int64" },
+            "RejectedRowCount": { "value": { "value": "@activity('LKP_Counts').output.firstRow.RejectedCnt", "type": "Expression" }, "type": "Int64" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Log_End_Success",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Log_RowCounts", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": "ALL", "type": "String" },
+            "Status":        { "value": "Succeeded", "type": "String" },
+            "ErrorMessage":  { "value": "", "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Log_End_Failure",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "SP_Load_FactRevenue", "dependencyConditions": ["Failed"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": "ALL", "type": "String" },
+            "Status":        { "value": "Failed", "type": "String" },
+            "ErrorMessage":  { "value": { "value": "@string(activity('SP_Load_FactRevenue').Error.message)", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "Fail_Gold",
+        "type": "Fail",
+        "dependsOn": [ { "activity": "SP_Log_End_Failure", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "message": { "value": "Gold load failed", "type": "Expression" },
+          "errorCode": "GoldLoadFailure"
+        }
+      }
+    ],
+    "parameters": {
+      "p_load_type":     { "type": "string", "defaultValue": "Full" },
+      "p_run_id":        { "type": "string", "defaultValue": "" },
+      "p_parent_run_id": { "type": "string", "defaultValue": "" },
+      "p_run_date":      { "type": "string", "defaultValue": "2026-08-11" }
+    },
+    "annotations": ["Finance", "PoC", "Gold", "PL_GOLD_LOAD"]
+  }
+}

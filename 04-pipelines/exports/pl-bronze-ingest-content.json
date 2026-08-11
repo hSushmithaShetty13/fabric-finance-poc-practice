@@ -1,0 +1,182 @@
+{
+  "properties": {
+    "description": "PL_BRONZE_INGEST - Copy landing CSV(s) for one entity into LH_Finance Bronze Delta table, with audit logging.",
+    "activities": [
+      {
+        "name": "SP_Log_Start",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineStart]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "ParentRunId":   { "value": { "value": "@pipeline().parameters.p_parent_run_id", "type": "Expression" }, "type": "String" },
+            "PipelineName":  { "value": "PL_BRONZE_INGEST", "type": "String" },
+            "Environment":   { "value": "POC", "type": "String" },
+            "LoadType":      { "value": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "SourceSystem":  { "value": "CSV_Landing", "type": "String" },
+            "RunDate":       { "value": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }, "type": "String" },
+            "TriggeredBy":   { "value": "PL_MASTER_ORCHESTRATOR", "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "LKP_Config",
+        "type": "Lookup",
+        "dependsOn": [ { "activity": "SP_Log_Start", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "source": {
+            "type": "DataWarehouseSource",
+            "sqlReaderQuery": {
+              "value": "@concat('SELECT LEFT(REPLACE(SourcePath,''Files/'',''''), LEN(REPLACE(SourcePath,''Files/'','''')) - 1) AS SourceFolder, BronzeTable, LoadMode FROM control.SourceConfig WHERE EntityName = ''', pipeline().parameters.p_entity_name, '''')",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "datasetSettings": {
+            "annotations": [],
+            "type": "DataWarehouseTable",
+            "schema": [],
+            "typeProperties": {},
+            "linkedService": {
+              "name": "WH_Finance_Gold",
+              "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+                "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+                "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+                "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+            }
+          },
+          "firstRowOnly": true
+        }
+      },
+      {
+        "name": "Copy_Bronze",
+        "type": "Copy",
+        "dependsOn": [ { "activity": "LKP_Config", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "source": {
+            "type": "DelimitedTextSource",
+            "storeSettings": {
+              "type": "LakehouseReadSettings",
+              "recursive": true,
+              "enablePartitionDiscovery": false,
+              "wildcardFolderPath": { "value": "@activity('LKP_Config').output.firstRow.SourceFolder", "type": "Expression" },
+              "wildcardFileName": "*.csv"
+            },
+            "formatSettings": { "type": "DelimitedTextReadSettings" },
+            "datasetSettings": {
+              "annotations": [],
+              "type": "DelimitedText",
+              "typeProperties": {
+                "location": { "type": "LakehouseLocation", "folderPath": "" },
+                "columnDelimiter": ",",
+                "escapeChar": "\"",
+                "firstRowAsHeader": true,
+                "quoteChar": "\""
+              },
+              "schema": [],
+              "linkedService": {
+                "name": "LH_Finance",
+                "properties": { "annotations": [], "type": "Lakehouse", "typeProperties": {
+                  "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d",
+                  "artifactId": "3dfe3fbe-4f9d-4ca2-ab91-f589b7f77533" } }
+              }
+            }
+          },
+          "sink": {
+            "type": "LakehouseTableSink",
+            "tableActionOption": { "value": "@if(equals(activity('LKP_Config').output.firstRow.LoadMode, 'Full'), 'Overwrite', 'Append')", "type": "Expression" },
+            "datasetSettings": {
+              "annotations": [],
+              "type": "LakehouseTable",
+              "typeProperties": {
+                "table": { "value": "@activity('LKP_Config').output.firstRow.BronzeTable", "type": "Expression" }
+              },
+              "schema": [],
+              "linkedService": {
+                "name": "LH_Finance",
+                "properties": { "annotations": [], "type": "Lakehouse", "typeProperties": {
+                  "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d",
+                  "artifactId": "3dfe3fbe-4f9d-4ca2-ab91-f589b7f77533" } }
+              }
+            }
+          },
+          "enableStaging": false
+        }
+      },
+      {
+        "name": "SP_Log_End_Success",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "Copy_Bronze", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "Status":        { "value": "Succeeded", "type": "String" },
+            "ErrorMessage":  { "value": "", "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "SP_Log_End_Failure",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "Copy_Bronze", "dependencyConditions": ["Failed"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().parameters.p_run_id", "type": "Expression" }, "type": "String" },
+            "EntityName":    { "value": { "value": "@pipeline().parameters.p_entity_name", "type": "Expression" }, "type": "String" },
+            "Status":        { "value": "Failed", "type": "String" },
+            "ErrorMessage":  { "value": { "value": "@string(activity('Copy_Bronze').Error.message)", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+        }
+      },
+      {
+        "name": "Fail_Bronze",
+        "type": "Fail",
+        "dependsOn": [ { "activity": "SP_Log_End_Failure", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "message": { "value": "@concat('Bronze ingest failed for entity: ', pipeline().parameters.p_entity_name)", "type": "Expression" },
+          "errorCode": "BronzeIngestFailure"
+        }
+      }
+    ],
+    "parameters": {
+      "p_entity_name":     { "type": "string", "defaultValue": "Customers" },
+      "p_load_type":       { "type": "string", "defaultValue": "Full" },
+      "p_run_id":          { "type": "string", "defaultValue": "" },
+      "p_parent_run_id":   { "type": "string", "defaultValue": "" },
+      "p_run_date":        { "type": "string", "defaultValue": "2026-08-11" }
+    },
+    "annotations": ["Finance", "PoC", "Bronze", "PL_BRONZE_INGEST"]
+  }
+}
