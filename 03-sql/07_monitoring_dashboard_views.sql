@@ -83,44 +83,9 @@ SELECT
 FROM audit.Reconciliation;
 GO
 
-CREATE OR ALTER VIEW audit.vw_alert_pipeline_failures
-AS
-SELECT
-    run_id,
-    parent_run_id,
-    pipeline_name,
-    entity_name,
-    status,
-    error_message,
-    end_time_utc
-FROM audit.pipeline_run
-WHERE status = 'Failed'
-  AND end_time_utc >= DATEADD(MINUTE, -15, SYSUTCDATETIME());
+DROP VIEW IF EXISTS audit.vw_alert_pipeline_failures;
+DROP VIEW IF EXISTS audit.vw_alert_reconciliation_breaches;
+DROP VIEW IF EXISTS audit.vw_alert_rejected_row_spikes;
 GO
 
-CREATE OR ALTER VIEW audit.vw_alert_reconciliation_breaches
-AS
-SELECT
-    run_id,
-    entity_name,
-    variance_pct,
-    tolerance_pct,
-    checked_at_utc
-FROM audit.reconciliation
-WHERE passed = 0
-  AND checked_at_utc >= DATEADD(MINUTE, -15, SYSUTCDATETIME());
-GO
-
-CREATE OR ALTER VIEW audit.vw_alert_rejected_row_spikes
-AS
-SELECT
-    entity_name,
-    SUM(rows_failed) AS rows_failed_last_24h,
-    MAX(detected_at_utc) AS last_detected_at_utc
-FROM audit.data_quality
-WHERE detected_at_utc >= DATEADD(HOUR, -24, SYSUTCDATETIME())
-GROUP BY entity_name
-HAVING SUM(rows_failed) >= 100;
-GO
-
-PRINT 'Monitoring dashboard and Activator views created.';
+PRINT 'Monitoring dashboard views created; legacy Activator alert views removed.';

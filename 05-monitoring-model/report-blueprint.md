@@ -81,4 +81,5 @@ Visuals:
 - No table partition uses `Sql.Database`.
 - `model.tmdl` contains the `DL_WH_Finance_Gold` `AzureStorage.DataLake(...)` expression.
 - The report uses physical table names, not the lowercase SQL views.
-- Activator rules use the lowercase alert views from `03-sql/07_monitoring_dashboard_views.sql`.
+- Activator rules originate from card visuals using `[Failed Runs]`,
+  `[Reconciliation Breaches]`, and `[DQ Failure Rows]`.

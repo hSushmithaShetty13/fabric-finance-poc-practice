@@ -345,7 +345,7 @@ DIVIDE(
 
 ## 9. Alerting options
 
-For concrete Warehouse source queries, rule settings, message templates, and smoke-test SQL, see
+For Power BI visual-alert settings, message templates, and smoke-test SQL, see
 [fabric-activator-setup.md](fabric-activator-setup.md).
 
 ### Fabric portal alerting
