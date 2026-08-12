@@ -36,7 +36,9 @@ practice-repo/
 │   └── architecture.md                ← medallion + component diagrams (Mermaid)
 ├── 02-data/
 │   ├── generate_finance_data.py        ← generates all 6 source CSVs with DQ issues (stdlib only)
-│   └── upload_to_onelake.ps1           ← lands the CSVs in LH_Finance/Files/landing/<entity>/
+│   ├── output/                          ← 6 ready-to-upload CSV files
+│   ├── manual-upload-to-lakehouse.md    ← browser-only upload steps (no PowerShell required)
+│   └── upload_to_onelake.ps1           ← optional automated OneLake upload
 ├── 03-sql/
 │   ├── 01_audit_framework.sql          ← audit schema, run-log, validation-log, logging procs
 │   ├── 02_control_and_rejects.sql      ← control.SourceConfig (metadata-driven config) + silver_rejects.*
@@ -102,9 +104,10 @@ pipeline changes needed.
    (`WH_Finance_Gold`). See [07-demo-script/demo-runbook.md § Step 1](07-demo-script/demo-runbook.md).
 2. **Deploy the SQL** — run the 4 scripts in [03-sql/](03-sql/) in order against `WH_Finance_Gold`
    via `sqlcmd`.
-3. **Generate + land the data** — run [generate_finance_data.py](02-data/generate_finance_data.py),
-   then [upload_to_onelake.ps1](02-data/upload_to_onelake.ps1) (edit the workspace/lakehouse IDs at
-   the top first).
+3. **Land the data** — upload the six included files from [02-data/output/](02-data/output/) by
+  following [the manual Lakehouse upload guide](02-data/manual-upload-to-lakehouse.md). No script
+  is required. For automated upload, optionally use
+  [upload_to_onelake.ps1](02-data/upload_to_onelake.ps1) after editing its workspace/lakehouse IDs.
 4. **Deploy the 4 pipelines** — use [deploy-pipeline.ps1](04-pipelines/deploy-pipeline.ps1) against
    each JSON in [04-pipelines/exports/](04-pipelines/exports/) (edit the `workspaceId`/`artifactId`
    GUIDs inside each JSON to match your workspace first — see the build guides for exactly which

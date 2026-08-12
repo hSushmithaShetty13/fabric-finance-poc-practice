@@ -328,8 +328,8 @@ def main() -> None:
     gen_payments(invoices, lines)
     gen_exchange_rates()
     gen_gl_accounts()
-    print("Done. Upload ./output/*.csv to the LH_Finance_Bronze Files area,")
-    print("or point a Copy activity / Dataflow Gen2 at them for the Bronze load.")
+    print("Done. Follow manual-upload-to-lakehouse.md to upload ./output/*.csv")
+    print("to the matching LH_Finance/Files/landing/<entity>/ folders.")
 
 
 if __name__ == "__main__":

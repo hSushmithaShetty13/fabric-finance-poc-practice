@@ -1,0 +1,22 @@
+GLAccountID,AccountName,AccountType,IsActive
+4000,Product Revenue,Revenue,0
+4001,Service Revenue,Revenue,1
+4002,Spare Parts,Revenue,1
+4003,Maintenance Revenue,Revenue,1
+4004,,Revenue,1
+4005,Consulting,Revenue,1
+4006,Training Revenue,Revenue,1
+4007,Freight Recovered,Revenue,1
+4008,Warranty Revenue,Revenue,0
+4009,Rebates,Revenue,1
+4010,Discounts Given,Revenue,1
+4011,Export Sales,Revenue,1
+4012,Domestic Sales,Revenue,1
+4013,Returns,Revenue,1
+4014,Other Income,Revenue,1
+4015,Interest Income,Revenue,1
+4016,FX Gains,Revenue,1
+4017,Scrap Sales,Revenue,1
+4018,Royalties,Revenue,1
+4019,Subscriptions,Revenue,1
+4020,Miscellaneous,Revenue,1
