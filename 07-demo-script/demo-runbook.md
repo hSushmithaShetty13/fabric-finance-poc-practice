@@ -5,8 +5,8 @@
 1. Create a Workspace (e.g. `WS_Finance_POC`) attached to a capacity.
 2. Create a Lakehouse named `LH_Finance`.
 3. Create a Warehouse named `WH_Finance_Gold`.
-4. Note the workspace ID, `LH_Finance` item ID, and `WH_Finance_Gold` item ID + SQL connection
-   string — you'll need to substitute these into the pipeline JSON exports and PowerShell scripts.
+4. Note the workspace ID, `LH_Finance` item ID, and `WH_Finance_Gold` SQL connection string only
+  if you plan to use the optional JSON/PowerShell deployment route.
 
 ```powershell
 az login
@@ -27,19 +27,28 @@ sqlcmd -S $server -d "WH_Finance_Gold" -G -i "03-sql\04_validation_framework.sql
 
 Verify: `SELECT * FROM control.SourceConfig;` should return 6 rows.
 
-## Step 3 — Generate and land the source data
+## Step 3 — Land the source data
 
-```powershell
-cd 02-data
-python generate_finance_data.py     # writes 6 CSVs to ./output/
-# Edit upload_to_onelake.ps1: set $wsId and $lhId to your workspace/lakehouse IDs
-.\upload_to_onelake.ps1
-```
+Follow [manual-upload-to-lakehouse.md](../02-data/manual-upload-to-lakehouse.md) to upload the six
+included CSV files through the Fabric portal. `upload_to_onelake.ps1` is an optional automation
+route.
 
 Verify via the Fabric portal: `LH_Finance` → Files → `landing/` should show 6 subfolders, each
 with one CSV.
 
-## Step 4 — Deploy the 4 pipelines
+## Step 4 — Build the 4 pipelines
+
+Follow [portal-build-guide.md](../04-pipelines/portal-build-guide.md). Build and test in this order:
+
+1. `PL_BRONZE_INGEST`
+2. `PL_SILVER_LOAD`
+3. `PL_GOLD_LOAD`
+4. `PL_MASTER_ORCHESTRATOR`
+
+The master uses `control.SourceConfig` to retrieve active entities and a parallel ForEach to run
+Bronze then Silver per entity. Gold is gated after the complete ForEach succeeds.
+
+### Optional JSON and PowerShell deployment
 
 For each JSON in `04-pipelines/exports/`:
 1. Open the file and replace every occurrence of the sample `workspaceId`

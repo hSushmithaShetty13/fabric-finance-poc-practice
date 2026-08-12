@@ -1,6 +1,6 @@
 {
   "properties": {
-    "description": "PL_MASTER_ORCHESTRATOR - invokes PL_BRONZE_INGEST, PL_SILVER_LOAD (x6 entities), then PL_GOLD_LOAD, with parent/child run-id linkage and audit logging.",
+    "description": "PL_MASTER_ORCHESTRATOR - reads active entities from control.SourceConfig, runs Bronze then Silver per entity in parallel, then runs Gold after every Silver load succeeds.",
     "activities": [
       {
         "name": "SP_Log_Master_Start",
@@ -11,14 +11,14 @@
           "storedProcedureName": "[audit].[SP_LogPipelineStart]",
           "storedProcedureParameters": {
             "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-            "ParentRunId":   { "value": "", "type": "String" },
-            "PipelineName":  { "value": "PL_MASTER_ORCHESTRATOR", "type": "String" },
-            "Environment":   { "value": "POC", "type": "String" },
-            "LoadType":      { "value": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" }, "type": "String" },
-            "EntityName":    { "value": "ALL", "type": "String" },
-            "SourceSystem":  { "value": "Orchestrator", "type": "String" },
-            "RunDate":       { "value": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }, "type": "String" },
-            "TriggeredBy":   { "value": "Manual", "type": "String" }
+            "ParentRunId": { "value": "", "type": "String" },
+            "PipelineName": { "value": "PL_MASTER_ORCHESTRATOR", "type": "String" },
+            "Environment": { "value": "POC", "type": "String" },
+            "LoadType": { "value": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" }, "type": "String" },
+            "EntityName": { "value": "ALL", "type": "String" },
+            "SourceSystem": { "value": "Orchestrator", "type": "String" },
+            "RunDate": { "value": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }, "type": "String" },
+            "TriggeredBy": { "value": "Manual", "type": "String" }
           }
         },
         "linkedService": {
@@ -26,201 +26,99 @@
           "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
             "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
             "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
-            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d"
+          } }
         }
       },
-
-      { "name": "Bronze_Customers", "type": "ExecutePipeline",
+      {
+        "name": "LKP_Active_Entities",
+        "type": "Lookup",
         "dependsOn": [ { "activity": "SP_Log_Master_Start", "dependencyConditions": ["Succeeded"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
         "typeProperties": {
-          "pipeline": { "referenceName": "470a6284-3c49-4138-b9b7-dd6f5d9d2e47", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "Customers", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-bc')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Bronze_Invoices", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "SP_Log_Master_Start", "dependencyConditions": ["Succeeded"] } ],
+          "source": {
+            "type": "DataWarehouseSource",
+            "sqlReaderQuery": "SELECT EntityName FROM control.SourceConfig WHERE IsActive = 1 ORDER BY EntityName",
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "datasetSettings": {
+            "annotations": [],
+            "type": "DataWarehouseTable",
+            "schema": [],
+            "typeProperties": {},
+            "linkedService": {
+              "name": "WH_Finance_Gold",
+              "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+                "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+                "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+                "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d"
+              } }
+            }
+          },
+          "firstRowOnly": false
+        }
+      },
+      {
+        "name": "ForEach_Entity",
+        "type": "ForEach",
+        "dependsOn": [ { "activity": "LKP_Active_Entities", "dependencyConditions": ["Succeeded"] } ],
         "typeProperties": {
-          "pipeline": { "referenceName": "470a6284-3c49-4138-b9b7-dd6f5d9d2e47", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "Invoices", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-bi')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Bronze_InvoiceLines", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "SP_Log_Master_Start", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "470a6284-3c49-4138-b9b7-dd6f5d9d2e47", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "InvoiceLines", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-bl')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Bronze_Payments", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "SP_Log_Master_Start", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "470a6284-3c49-4138-b9b7-dd6f5d9d2e47", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "Payments", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-bp')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Bronze_ExchangeRates", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "SP_Log_Master_Start", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "470a6284-3c49-4138-b9b7-dd6f5d9d2e47", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "ExchangeRates", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-be')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Bronze_GLAccounts", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "SP_Log_Master_Start", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "470a6284-3c49-4138-b9b7-dd6f5d9d2e47", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "GLAccounts", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-bg')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-
-      { "name": "Wait_Customers", "type": "Wait",
-        "dependsOn": [ { "activity": "Bronze_Customers", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": { "waitTimeInSeconds": 90 } },
-      { "name": "Silver_Customers", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "Wait_Customers", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "e07080e9-72b5-4833-879e-c3d6a474c7a9", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "Customers", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-sc')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Wait_Invoices", "type": "Wait",
-        "dependsOn": [ { "activity": "Bronze_Invoices", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": { "waitTimeInSeconds": 90 } },
-      { "name": "Silver_Invoices", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "Wait_Invoices", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "e07080e9-72b5-4833-879e-c3d6a474c7a9", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "Invoices", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-si')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Wait_InvoiceLines", "type": "Wait",
-        "dependsOn": [ { "activity": "Bronze_InvoiceLines", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": { "waitTimeInSeconds": 90 } },
-      { "name": "Silver_InvoiceLines", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "Wait_InvoiceLines", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "e07080e9-72b5-4833-879e-c3d6a474c7a9", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "InvoiceLines", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-sl')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Wait_Payments", "type": "Wait",
-        "dependsOn": [ { "activity": "Bronze_Payments", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": { "waitTimeInSeconds": 90 } },
-      { "name": "Silver_Payments", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "Wait_Payments", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "e07080e9-72b5-4833-879e-c3d6a474c7a9", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "Payments", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-sp')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Wait_ExchangeRates", "type": "Wait",
-        "dependsOn": [ { "activity": "Bronze_ExchangeRates", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": { "waitTimeInSeconds": 90 } },
-      { "name": "Silver_ExchangeRates", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "Wait_ExchangeRates", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "e07080e9-72b5-4833-879e-c3d6a474c7a9", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "ExchangeRates", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-se')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-      { "name": "Wait_GLAccounts", "type": "Wait",
-        "dependsOn": [ { "activity": "Bronze_GLAccounts", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": { "waitTimeInSeconds": 90 } },
-      { "name": "Silver_GLAccounts", "type": "ExecutePipeline",
-        "dependsOn": [ { "activity": "Wait_GLAccounts", "dependencyConditions": ["Succeeded"] } ],
-        "typeProperties": {
-          "pipeline": { "referenceName": "e07080e9-72b5-4833-879e-c3d6a474c7a9", "type": "PipelineReference" },
-          "waitOnCompletion": true,
-          "parameters": {
-            "p_entity_name": { "value": "GLAccounts", "type": "Expression" },
-            "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
-            "p_run_id": { "value": "@concat(pipeline().RunId, '-sg')", "type": "Expression" },
-            "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
-            "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
-          }
-        } },
-
-      { "name": "Wait_Before_Gold", "type": "Wait",
-        "dependsOn": [
-          { "activity": "Silver_Customers", "dependencyConditions": ["Succeeded"] },
-          { "activity": "Silver_Invoices", "dependencyConditions": ["Succeeded"] },
-          { "activity": "Silver_InvoiceLines", "dependencyConditions": ["Succeeded"] },
-          { "activity": "Silver_Payments", "dependencyConditions": ["Succeeded"] },
-          { "activity": "Silver_ExchangeRates", "dependencyConditions": ["Succeeded"] },
-          { "activity": "Silver_GLAccounts", "dependencyConditions": ["Succeeded"] }
-        ],
-        "typeProperties": { "waitTimeInSeconds": 90 } },
-
-      { "name": "Gold_Load", "type": "ExecutePipeline",
-        "dependsOn": [
-          { "activity": "Wait_Before_Gold", "dependencyConditions": ["Succeeded"] }
-        ],
+          "items": { "value": "@activity('LKP_Active_Entities').output.value", "type": "Expression" },
+          "isSequential": false,
+          "batchCount": 6,
+          "activities": [
+            {
+              "name": "Run_Bronze",
+              "type": "ExecutePipeline",
+              "dependsOn": [],
+              "typeProperties": {
+                "pipeline": { "referenceName": "470a6284-3c49-4138-b9b7-dd6f5d9d2e47", "type": "PipelineReference" },
+                "waitOnCompletion": true,
+                "parameters": {
+                  "p_entity_name": { "value": "@item().EntityName", "type": "Expression" },
+                  "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
+                  "p_run_id": { "value": "@concat(substring(pipeline().RunId, 0, 36), '-b-', substring(item().EntityName, 0, 8))", "type": "Expression" },
+                  "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
+                  "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
+                }
+              }
+            },
+            {
+              "name": "Wait_After_Bronze",
+              "type": "Wait",
+              "dependsOn": [ { "activity": "Run_Bronze", "dependencyConditions": ["Succeeded"] } ],
+              "typeProperties": { "waitTimeInSeconds": 90 }
+            },
+            {
+              "name": "Run_Silver",
+              "type": "ExecutePipeline",
+              "dependsOn": [ { "activity": "Wait_After_Bronze", "dependencyConditions": ["Succeeded"] } ],
+              "typeProperties": {
+                "pipeline": { "referenceName": "e07080e9-72b5-4833-879e-c3d6a474c7a9", "type": "PipelineReference" },
+                "waitOnCompletion": true,
+                "parameters": {
+                  "p_entity_name": { "value": "@item().EntityName", "type": "Expression" },
+                  "p_load_type": { "value": "@pipeline().parameters.p_load_type", "type": "Expression" },
+                  "p_run_id": { "value": "@concat(substring(pipeline().RunId, 0, 36), '-s-', substring(item().EntityName, 0, 8))", "type": "Expression" },
+                  "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
+                  "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Wait_Before_Gold",
+        "type": "Wait",
+        "dependsOn": [ { "activity": "ForEach_Entity", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": { "waitTimeInSeconds": 90 }
+      },
+      {
+        "name": "Gold_Load",
+        "type": "ExecutePipeline",
+        "dependsOn": [ { "activity": "Wait_Before_Gold", "dependencyConditions": ["Succeeded"] } ],
         "typeProperties": {
           "pipeline": { "referenceName": "a7c308f8-7126-4363-89fc-2b7e855c554b", "type": "PipelineReference" },
           "waitOnCompletion": true,
@@ -230,18 +128,20 @@
             "p_parent_run_id": { "value": "@pipeline().RunId", "type": "Expression" },
             "p_run_date": { "value": "@pipeline().parameters.p_run_date", "type": "Expression" }
           }
-        } },
-
-      { "name": "SP_Log_Master_Success", "type": "SqlServerStoredProcedure",
+        }
+      },
+      {
+        "name": "SP_Log_Master_Success",
+        "type": "SqlServerStoredProcedure",
         "dependsOn": [ { "activity": "Gold_Load", "dependencyConditions": ["Succeeded"] } ],
         "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
         "typeProperties": {
           "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
           "storedProcedureParameters": {
             "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-            "EntityName":    { "value": "ALL", "type": "String" },
-            "Status":        { "value": "Succeeded", "type": "String" },
-            "ErrorMessage":  { "value": "", "type": "String" }
+            "EntityName": { "value": "ALL", "type": "String" },
+            "Status": { "value": "Succeeded", "type": "String" },
+            "ErrorMessage": { "value": "", "type": "String" }
           }
         },
         "linkedService": {
@@ -249,18 +149,54 @@
           "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
             "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
             "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
-            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
-        } },
-      { "name": "SP_Log_Master_Failure", "type": "SqlServerStoredProcedure",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d"
+          } }
+        }
+      },
+      {
+        "name": "SP_Log_Entity_Loop_Failure",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [ { "activity": "ForEach_Entity", "dependencyConditions": ["Failed"] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+        "typeProperties": {
+          "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
+          "storedProcedureParameters": {
+            "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
+            "EntityName": { "value": "ALL", "type": "String" },
+            "Status": { "value": "Failed", "type": "String" },
+            "ErrorMessage": { "value": { "value": "@string(activity('ForEach_Entity').Error.message)", "type": "Expression" }, "type": "String" }
+          }
+        },
+        "linkedService": {
+          "name": "WH_Finance_Gold",
+          "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
+            "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
+            "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d"
+          } }
+        }
+      },
+      {
+        "name": "Fail_Entity_Loop",
+        "type": "Fail",
+        "dependsOn": [ { "activity": "SP_Log_Entity_Loop_Failure", "dependencyConditions": ["Succeeded"] } ],
+        "typeProperties": {
+          "message": { "value": "PL_MASTER_ORCHESTRATOR: one or more Bronze/Silver entity loads failed", "type": "Expression" },
+          "errorCode": "EntityLoopFailure"
+        }
+      },
+      {
+        "name": "SP_Log_Gold_Failure",
+        "type": "SqlServerStoredProcedure",
         "dependsOn": [ { "activity": "Gold_Load", "dependencyConditions": ["Failed"] } ],
         "policy": { "timeout": "0.02:00:00", "retry": 1, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
         "typeProperties": {
           "storedProcedureName": "[audit].[SP_LogPipelineEnd]",
           "storedProcedureParameters": {
             "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-            "EntityName":    { "value": "ALL", "type": "String" },
-            "Status":        { "value": "Failed", "type": "String" },
-            "ErrorMessage":  { "value": { "value": "@string(activity('Gold_Load').Error.message)", "type": "Expression" }, "type": "String" }
+            "EntityName": { "value": "ALL", "type": "String" },
+            "Status": { "value": "Failed", "type": "String" },
+            "ErrorMessage": { "value": { "value": "@string(activity('Gold_Load').Error.message)", "type": "Expression" }, "type": "String" }
           }
         },
         "linkedService": {
@@ -268,21 +204,24 @@
           "properties": { "annotations": [], "type": "DataWarehouse", "typeProperties": {
             "endpoint": "xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com",
             "artifactId": "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa",
-            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d" } }
-        } },
-      { "name": "Fail_Master", "type": "Fail",
-        "dependsOn": [ { "activity": "SP_Log_Master_Failure", "dependencyConditions": ["Succeeded"] } ],
+            "workspaceId": "ad5bf890-cd6e-4786-b69c-15876240823d"
+          } }
+        }
+      },
+      {
+        "name": "Fail_Gold",
+        "type": "Fail",
+        "dependsOn": [ { "activity": "SP_Log_Gold_Failure", "dependencyConditions": ["Succeeded"] } ],
         "typeProperties": {
           "message": { "value": "PL_MASTER_ORCHESTRATOR: Gold load stage failed", "type": "Expression" },
-          "errorCode": "MasterOrchestratorFailure"
-        } }
+          "errorCode": "GoldLoadFailure"
+        }
+      }
     ],
     "parameters": {
       "p_load_type": { "type": "string", "defaultValue": "Full" },
-      "p_run_date":  { "type": "string", "defaultValue": "2026-08-11" }
+      "p_run_date": { "type": "string", "defaultValue": "2026-08-11" }
     },
-    "annotations": ["Finance", "PoC", "Master", "PL_MASTER_ORCHESTRATOR"]
+    "annotations": ["Finance", "PoC", "Master", "MetadataDriven", "PL_MASTER_ORCHESTRATOR"]
   }
 }
-
-

@@ -1,70 +1,129 @@
-# PL_MASTER_ORCHESTRATOR — Build Guide
+# PL_MASTER_ORCHESTRATOR - Metadata-Driven Build Guide
 
-**Purpose**: run the whole medallion flow — Bronze (×6 entities, parallel) → Silver (×6 entities,
-each gated on its own Bronze) → Gold (once, gated on all 6 Silver) — with a shared `RunId` for
-end-to-end audit correlation.
+**Purpose**: read active entities from `control.SourceConfig`, run Bronze then Silver for each entity,
+and run Gold only after every Silver load succeeds.
+
+For complete portal creation steps, start with [portal-build-guide.md](portal-build-guide.md).
 
 ## Parameters
 
 | Name | Default | Notes |
 |---|---|---|
-| `p_load_type` | `Full` | Passed through to every child pipeline |
-| `p_run_date` | today's date | Passed through to every child pipeline |
+| `p_load_type` | `Full` | Passed to every child pipeline |
+| `p_run_date` | current date | Passed to every child pipeline |
 
 ## Activity graph
 
 ```mermaid
-flowchart TB
-    Start[SP_Log_Master_Start] --> BC[Bronze_Customers] & BI[Bronze_Invoices] & BL[Bronze_InvoiceLines] & BP[Bronze_Payments] & BE[Bronze_ExchangeRates] & BG[Bronze_GLAccounts]
-    BC --> WC[Wait_Customers 60s] --> SC[Silver_Customers]
-    BI --> WI[Wait_Invoices 60s] --> SI[Silver_Invoices]
-    BL --> WL[Wait_InvoiceLines 60s] --> SL[Silver_InvoiceLines]
-    BP --> WP[Wait_Payments 60s] --> SP[Silver_Payments]
-    BE --> WE[Wait_ExchangeRates 60s] --> SE[Silver_ExchangeRates]
-    BG --> WG[Wait_GLAccounts 60s] --> SG[Silver_GLAccounts]
-    SC & SI & SL & SP & SE & SG --> WBG[Wait_Before_Gold 60s] --> Gold[Gold_Load]
+flowchart LR
+    Start[SP_Log_Master_Start] --> Lookup[LKP_Active_Entities]
+    Lookup --> Loop{ForEach_Entity\nparallel batch 6}
+    Loop --> Bronze[Run_Bronze]
+    Bronze --> WaitEntity[Wait_After_Bronze 90s]
+    WaitEntity --> Silver[Run_Silver]
+    Loop -->|all iterations succeeded| WaitGold[Wait_Before_Gold 90s]
+    WaitGold --> Gold[Gold_Load]
     Gold -->|Succeeded| Success[SP_Log_Master_Success]
-    Gold -->|Failed| Failure[SP_Log_Master_Failure] --> Fail[Fail_Master]
+    Loop -->|Failed| LoopLog[SP_Log_Entity_Loop_Failure] --> LoopFail[Fail_Entity_Loop]
+    Gold -->|Failed| GoldLog[SP_Log_Gold_Failure] --> GoldFail[Fail_Gold]
 ```
 
-## Design notes
+The ForEach does not finish until every iteration finishes. `Wait_Before_Gold` depends on
+`ForEach_Entity` with the **Succeeded** condition, so Gold cannot run while any Silver load is still
+running and does not run if any Bronze or Silver child fails.
 
-- **Each child call passes only `p_entity_name` + run controls** (`p_load_type`, `p_run_id`,
-  `p_parent_run_id`, `p_run_date`) — the child pipelines self-configure the rest via
-  `LKP_Config` against `control.SourceConfig`. See
-  [lessons-learned.md](../06-monitoring/lessons-learned.md) #8.
-- **`p_run_id` per child uses a short suffix**, e.g. `@concat(pipeline().RunId, '-bc')` for
-  `Bronze_Customers`. Don't use long descriptive prefixes like `'bronze-customers-'` +
-  `pipeline().RunId` — that exceeds `VARCHAR(50)` on `audit.PipelineRunLog.PipelineRunId` and
-  `silver_rejects.<Entity>.RunId`, and Fabric Warehouse doesn't support widening the column via
-  `ALTER COLUMN` (see [lessons-learned.md](../06-monitoring/lessons-learned.md) #4).
-- **`p_parent_run_id` for every child is `@pipeline().RunId`** (the master's own run ID) — this is
-  what lets you correlate every Bronze/Silver/Gold audit row back to a single orchestration run.
-- **`Wait_<Entity>` (60s) between each `Bronze_<Entity>` and `Silver_<Entity>`**, and
-  **`Wait_Before_Gold` (60s) after all Silver activities**, buffer the Lakehouse SQL analytics
-  endpoint metadata sync lag (see [lessons-learned.md](../06-monitoring/lessons-learned.md) #3).
-  `PL_SILVER_LOAD` has its own internal wait too (between its Copy and its Script activity) — so
-  there are effectively two sync buffers per entity: one before Silver starts, one inside Silver
-  before it reads back what it just wrote.
-- **Bronze/Silver activities for different entities run in parallel** (each only depends on its
-  own predecessor) — the whole run typically completes in 10–15 minutes, dominated by the
-  `Wait` buffers, not actual data movement (which is a few seconds per entity at this data volume).
+## Top-level activities
 
-## Verified end-to-end result (audit.PipelineRunLog for one master RunId)
+| Order | Activity | Type | Depends on |
+|---|---|---|---|
+| 1 | `SP_Log_Master_Start` | Stored procedure | none |
+| 2 | `LKP_Active_Entities` | Lookup | master start succeeded |
+| 3 | `ForEach_Entity` | ForEach | Lookup succeeded |
+| 4 | `Wait_Before_Gold` | Wait, 90 seconds | ForEach succeeded |
+| 5 | `Gold_Load` | Execute Pipeline | wait succeeded |
+| 6 | `SP_Log_Master_Success` | Stored procedure | Gold succeeded |
+| 7 | `SP_Log_Entity_Loop_Failure` | Stored procedure | ForEach failed |
+| 8 | `Fail_Entity_Loop` | Fail | loop failure logged |
+| 9 | `SP_Log_Gold_Failure` | Stored procedure | Gold failed |
+| 10 | `Fail_Gold` | Fail | Gold failure logged |
 
-| PipelineName | EntityName | Status | Source | Target | Rejected |
-|---|---|---|---|---|---|
-| PL_MASTER_ORCHESTRATOR | ALL | Succeeded | – | – | – |
-| PL_BRONZE_INGEST | Customers/Invoices/InvoiceLines/Payments/ExchangeRates/GLAccounts (×6) | Succeeded | – | – | – |
-| PL_SILVER_LOAD | (×6, same entities) | Succeeded | matches Bronze | matches Bronze | 5/70/250/51/41/3 |
-| PL_GOLD_LOAD | ALL | Succeeded | 2973 | ~2550–2689 | 0 |
+## Active-entity Lookup
 
-## Simulating a failure (for the demo)
+Connection: `WH_Finance_Gold`. Set **First row only** to false.
 
-Easiest reproducible failure: temporarily rename or delete one of the landing CSVs in OneLake
-before running, or pass a `p_entity_name` that doesn't exist in `control.SourceConfig` when
-running `PL_BRONZE_INGEST` standalone — `LKP_Config`'s `firstRowOnly` Lookup will return no rows,
-and the subsequent `Copy_Bronze` activity's dynamic content expressions will fail to resolve,
-triggering `SP_Log_End_Failure` → `Fail_Bronze`, which is then visible as a `Failed` status on
-whichever `Bronze_<Entity>` `ExecutePipeline` activity called it, and logged with a full error
-message in `audit.PipelineRunLog`.
+```sql
+SELECT EntityName
+FROM control.SourceConfig
+WHERE IsActive = 1
+ORDER BY EntityName;
+```
+
+## ForEach configuration
+
+| Setting | Value |
+|---|---|
+| Items | `@activity('LKP_Active_Entities').output.value` |
+| Sequential | false |
+| Batch count | 6 |
+
+Inside the loop:
+
+```text
+Run_Bronze -> Wait_After_Bronze (90 seconds) -> Run_Silver
+```
+
+Both Execute Pipeline activities use **Wait on completion**.
+
+### Run_Bronze parameters
+
+| Parameter | Expression |
+|---|---|
+| `p_entity_name` | `@item().EntityName` |
+| `p_load_type` | `@pipeline().parameters.p_load_type` |
+| `p_run_id` | `@concat(substring(pipeline().RunId, 0, 36), '-b-', substring(item().EntityName, 0, 8))` |
+| `p_parent_run_id` | `@pipeline().RunId` |
+| `p_run_date` | `@pipeline().parameters.p_run_date` |
+
+### Run_Silver parameters
+
+Use the same mappings, with this run ID:
+
+```text
+@concat(substring(pipeline().RunId, 0, 36), '-s-', substring(item().EntityName, 0, 8))
+```
+
+The child run IDs are at most 47 characters and fit `audit.PipelineRunLog.PipelineRunId VARCHAR(50)`.
+
+## Gold configuration
+
+`Gold_Load` calls `PL_GOLD_LOAD` after `Wait_Before_Gold` succeeds.
+
+| Parameter | Expression |
+|---|---|
+| `p_load_type` | `@pipeline().parameters.p_load_type` |
+| `p_run_id` | `@concat(pipeline().RunId, '-gl')` |
+| `p_parent_run_id` | `@pipeline().RunId` |
+| `p_run_date` | `@pipeline().parameters.p_run_date` |
+
+## Why this design
+
+- Adding an entity requires a row in `control.SourceConfig`, not three new master activities.
+- `IsActive` controls whether the entity participates in a run.
+- Parallel ForEach iterations preserve throughput.
+- Bronze, wait, and Silver stay ordered within each entity.
+- Gold has one clear barrier: successful completion of the entire entity loop.
+- The canvas remains readable as the number of entities grows.
+
+## Expected run shape
+
+For six active entities, Monitoring hub shows one master Lookup and six ForEach iterations. Each
+iteration invokes one Bronze and one Silver child. Gold is invoked once after all six iterations.
+
+| Pipeline | Expected child runs |
+|---|---:|
+| `PL_BRONZE_INGEST` | 6 |
+| `PL_SILVER_LOAD` | 6 |
+| `PL_GOLD_LOAD` | 1 |
+
+To add a seventh entity, insert its configuration row, upload its landing file, and set
+`IsActive = 1`. The master definition does not change.

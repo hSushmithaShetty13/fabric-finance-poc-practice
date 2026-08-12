@@ -45,17 +45,18 @@ practice-repo/
 │   ├── 03_gold_warehouse_schema.sql    ← Gold star schema (dims + fact) + load procs
 │   └── 04_validation_framework.sql     ← reconciliation + Gold validation rules
 ├── 04-pipelines/
+│   ├── portal-build-guide.md            ← recommended portal-first build order and instructions
 │   ├── pl_bronze_ingest.md             ← build guide
 │   ├── pl_silver_load.md               ← build guide
 │   ├── pl_gold_load.md                 ← build guide
 │   ├── pl_master_orchestrator.md       ← build guide
-│   ├── deploy-pipeline.ps1             ← generic "create DataPipeline item" script
+│   ├── deploy-pipeline.ps1             ← optional generic "create DataPipeline item" script
 │   ├── update-pipeline.ps1             ← generic "update pipeline definition" script
 │   ├── run-pipeline.ps1                ← generic "trigger a pipeline run" script
 │   └── exports/                        ← the exact, working pipeline-content.json for all 4 pipelines
 ├── 06-monitoring/
 │   ├── monitoring-guide.md             ← Monitoring hub, audit SQL, reconciliation, alerts
-│   ├── fabric-activator-setup.md       ← Warehouse-query based Activator rules
+│   ├── fabric-activator-setup.md       ← Power BI visual-based Activator rules
 │   └── lessons-learned.md              ← every real bug we hit + the fix (read this before you start!)
 └── 07-demo-script/
     └── demo-runbook.md                 ← step-by-step rebuild + live-demo runbook
@@ -108,12 +109,12 @@ pipeline changes needed.
   following [the manual Lakehouse upload guide](02-data/manual-upload-to-lakehouse.md). No script
   is required. For automated upload, optionally use
   [upload_to_onelake.ps1](02-data/upload_to_onelake.ps1) after editing its workspace/lakehouse IDs.
-4. **Deploy the 4 pipelines** — use [deploy-pipeline.ps1](04-pipelines/deploy-pipeline.ps1) against
-   each JSON in [04-pipelines/exports/](04-pipelines/exports/) (edit the `workspaceId`/`artifactId`
-   GUIDs inside each JSON to match your workspace first — see the build guides for exactly which
-   lines to change).
-5. **Run it** — trigger `PL_MASTER_ORCHESTRATOR` via [run-pipeline.ps1](04-pipelines/run-pipeline.ps1)
-   with `{"p_load_type":"Full","p_run_date":"<today>"}`.
+4. **Build the 4 pipelines** — follow the
+  [portal-first pipeline build guide](04-pipelines/portal-build-guide.md) in Bronze, Silver, Gold,
+  then Master order. The JSON exports and PowerShell scripts are optional deployment shortcuts.
+5. **Run it** — run `PL_MASTER_ORCHESTRATOR` from the Fabric portal with `p_load_type=Full` and
+  `p_run_date=<today>`. The optional [run-pipeline.ps1](04-pipelines/run-pipeline.ps1) provides an
+  automated trigger.
 6. **Verify** — query `audit.PipelineRunLog` and `audit.ValidationLog` in `WH_Finance_Gold`.
 7. **Monitor it** — follow [06-monitoring/monitoring-guide.md](06-monitoring/monitoring-guide.md)
   for Monitoring hub, audit queries, reconciliation, troubleshooting, and alerting options.

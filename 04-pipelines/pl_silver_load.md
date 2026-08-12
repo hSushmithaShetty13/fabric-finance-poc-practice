@@ -24,7 +24,7 @@ Same five as `PL_BRONZE_INGEST`: `p_entity_name`, `p_load_type`, `p_run_id`, `p_
 flowchart LR
     A[SP_Log_Start] --> B[LKP_Config]
     B --> C[Copy_Bronze_To_Silver]
-    C --> D[Wait_SqlEndpointSync\n60s]
+    C --> D[Wait_SqlEndpointSync\n90s]
     D --> E[SCR_Classify_Rejects]
     E --> F[LKP_Counts]
     F --> G[SP_Log_RowCounts]
@@ -52,7 +52,7 @@ Sink: `LakehouseTableSink`, table = `@activity('LKP_Config').output.firstRow.Sil
 > endpoint is read-only, so a later step can't `DELETE` bad rows out of Silver. See
 > [lessons-learned.md](../06-monitoring/lessons-learned.md) #7.
 
-### 4. `Wait_SqlEndpointSync` (Wait, 60s)
+### 4. `Wait_SqlEndpointSync` (Wait, 90s)
 Buffers the SQL analytics endpoint metadata sync lag before the next step queries the freshly
 overwritten Silver table. See [lessons-learned.md](../06-monitoring/lessons-learned.md) #3.
 
