@@ -7,11 +7,13 @@ This demo compares two semantic models over the same `WH_Finance_Gold` data. The
 | Before | `SM_Finance_AI_Unprepared` | `9490c297-5260-45e1-9644-4832eddc6882` | Valid model with source-style names, implicit aggregation, ambiguous measures, and no Prep for AI artifacts. |
 | After | `SM_Finance_AI_Ready` | `60f5ecdd-48e2-449c-8375-5f001364eedd` | Business names, explicit measures, descriptions, synonyms, scoped AI schema, example prompts, and finance instructions. |
 
-Both models use Direct Lake against:
+Both models use Direct Lake on SQL against:
 
 - Workspace: `WS_Finance_POC` (`ad5bf890-cd6e-4786-b69c-15876240823d`)
 - Warehouse: `WH_Finance_Gold` (`d88b4acf-a3ee-4568-aa66-8403b6b9ceaa`)
 - Tables: `gold.DimDate`, `gold.DimCustomer`, `gold.DimGLAccount`, `gold.FactRevenue`
+
+The shared model expression uses `Sql.Database` with the Warehouse SQL analytics endpoint hostname and Warehouse item GUID. `AzureStorage.DataLake` is the Direct Lake on OneLake connector and causes web-model schema refresh to fail with `Unable to load a query that produces no tables` for this Warehouse model.
 
 ## Intentional differences
 

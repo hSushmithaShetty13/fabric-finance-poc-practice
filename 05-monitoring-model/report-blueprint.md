@@ -81,8 +81,9 @@ Bronze, Silver, Gold, or master pipeline execution within that orchestration.
 ## Direct Lake validation checklist
 
 - Model table partitions use `mode: directLake`.
-- No table partition uses `Sql.Database`.
-- `model.tmdl` contains the `DL_WH_Finance_Gold` `AzureStorage.DataLake(...)` expression.
+- `model.tmdl` contains the `DL_WH_Finance_Gold` shared `Sql.Database(...)` expression.
+- The expression uses the Warehouse SQL analytics endpoint hostname and Warehouse item GUID, which is required for Direct Lake on SQL schema refresh in Power BI web modeling.
+- Each entity partition maps to its Warehouse schema and table through `schemaName` and `entityName`.
 - The report uses physical table names, not the lowercase SQL views.
 - Activator rules originate from card visuals using `[Failed Runs]`,
   `[Reconciliation Breaches]`, and `[DQ Failure Rows]`.

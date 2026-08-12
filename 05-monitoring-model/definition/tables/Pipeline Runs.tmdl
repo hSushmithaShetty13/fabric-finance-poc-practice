@@ -1,14 +1,9 @@
 table 'Pipeline Runs'
 
-	measure 'Success Rate %' =
-		DIVIDE(
-			CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Succeeded"),
-			COUNTROWS('Pipeline Runs')
-		)
+	measure 'Success Rate %' = DIVIDE(CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Succeeded"), COUNTROWS('Pipeline Runs'))
 		formatString: 0.00%
 
-	measure 'Runs Today' =
-		CALCULATE(COUNTROWS('Pipeline Runs'), FILTER('Pipeline Runs', DATEVALUE('Pipeline Runs'[StartTimeUtc]) = TODAY()))
+	measure 'Runs Today' = CALCULATE(COUNTROWS('Pipeline Runs'), FILTER('Pipeline Runs', DATEVALUE('Pipeline Runs'[StartTimeUtc]) = TODAY()))
 		formatString: #,##0
 
 	measure 'Failed Runs' = COALESCE(CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Failed"), 0)
@@ -29,8 +24,7 @@ table 'Pipeline Runs'
 	measure 'Reconciliation Breaches' = COALESCE(CALCULATE(COUNTROWS(Reconciliation), Reconciliation[Passed] = FALSE()), 0)
 		formatString: #,##0
 
-	measure 'Pipeline Health Status' =
-		SWITCH(TRUE(), [Failed Runs] > 0, "Failed", [Reconciliation Breaches] > 0, "Needs Review", [Total Rows Rejected] > 0, "DQ Findings", "Healthy")
+	measure 'Pipeline Health Status' = SWITCH(TRUE(), [Failed Runs] > 0, "Failed", [Reconciliation Breaches] > 0, "Needs Review", [Total Rows Rejected] > 0, "DQ Findings", "Healthy")
 		formatString: @
 
 	column RunId

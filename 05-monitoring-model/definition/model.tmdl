@@ -5,7 +5,7 @@ model Model
 
 expression 'DL_WH_Finance_Gold' =
 		let
-			Source = AzureStorage.DataLake("https://onelake.dfs.fabric.microsoft.com/ad5bf890-cd6e-4786-b69c-15876240823d/d88b4acf-a3ee-4568-aa66-8403b6b9ceaa", [HierarchicalNavigation=true])
+			Source = Sql.Database("xixd7xfz54kurayrqp4zf3cx3m-sd4fxllozwdepnu4cwdweqechu.datawarehouse.fabric.microsoft.com", "d88b4acf-a3ee-4568-aa66-8403b6b9ceaa")
 		in
 			Source
 
