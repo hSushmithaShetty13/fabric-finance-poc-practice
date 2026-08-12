@@ -35,7 +35,6 @@ Rule configuration:
 | Setting | Value |
 |---|---|
 | Condition | `[Failed Runs]` > 0 |
-| Severity | Error |
 | Action | Teams message and/or email |
 
 Suggested Teams message:
@@ -57,7 +56,6 @@ Rule configuration:
 | Setting | Value |
 |---|---|
 | Condition | `[Reconciliation Breaches]` > 0 |
-| Severity | Error |
 | Action | Teams message and/or email |
 
 Suggested Teams message:
@@ -79,7 +77,6 @@ Rule configuration:
 | Setting | Value |
 |---|---|
 | Condition | `[DQ Failure Rows]` >= 100 |
-| Severity | Warning |
 | Action | Teams message or email |
 
 Suggested Teams message:
@@ -97,12 +94,20 @@ Do not start from **Activator > Get data** for this route.
 2. Add card visuals for `[Failed Runs]`, `[Reconciliation Breaches]`, and `[DQ Failure Rows]`.
 3. Apply the required time filter to each visual: last 15 minutes for failed runs, the desired
   reconciliation window, and last 24 hours for rejected rows.
-4. On each card, select **...** > **Set alert**. Fabric opens Activator with that visual as the
-  source.
-5. Set the condition to **greater than 0**, choose Teams or email, save the rule, and select
-  **Start** if the rule is not started automatically.
-6. Trigger a test failure or insert a smoke-test row, then refresh the semantic model/report data
+4. On each card, select **...** > **Set alert**. Fabric opens the **Create alert** pane at the
+  **Select data to set an alert on** step.
+5. Expand the card entry and select the inner measure row with the calculator icon. Selecting or
+  expanding only the card header does not open the condition editor.
+6. In the condition editor that appears, set the operator and threshold, choose Teams or email,
+  save the rule, and select **Start** if the rule is not started automatically.
+7. Power BI visual alerts do not expose a **Severity** setting. Communicate urgency through the
+  rule name and notification text if needed.
+8. Trigger a test failure or insert a smoke-test row, then refresh the semantic model/report data
   if required and verify delivery.
+
+If a card displays `--` instead of `0`, redeploy the semantic model definition before creating the
+alert. The alert measures use `COALESCE(..., 0)` so an empty time window remains a numeric data
+point that Power BI can use in the condition editor.
 
 The Warehouse cannot be selected directly in the current **Connect data source** dialog.
 

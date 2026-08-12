@@ -1,6 +1,6 @@
 table 'Data Quality'
 
-	measure 'DQ Failure Rows' = SUM('Data Quality'[RowsFailed])
+	measure 'DQ Failure Rows' = COALESCE(SUM('Data Quality'[RowsFailed]), 0)
 		formatString: #,##0
 
 	measure 'DQ Rules Triggered' = DISTINCTCOUNT('Data Quality'[RuleCode])

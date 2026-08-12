@@ -11,7 +11,7 @@ table 'Pipeline Runs'
 		CALCULATE(COUNTROWS('Pipeline Runs'), FILTER('Pipeline Runs', DATEVALUE('Pipeline Runs'[StartTimeUtc]) = TODAY()))
 		formatString: #,##0
 
-	measure 'Failed Runs' = CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Failed")
+	measure 'Failed Runs' = COALESCE(CALCULATE(COUNTROWS('Pipeline Runs'), 'Pipeline Runs'[Status] = "Failed"), 0)
 		formatString: #,##0
 
 	measure 'Average Duration Seconds' = AVERAGE('Pipeline Runs'[DurationSeconds])
@@ -26,7 +26,7 @@ table 'Pipeline Runs'
 	measure 'Reconciliation Variance %' = DIVIDE(SUM(Reconciliation[VarianceRows]), SUM(Reconciliation[SourceRowCount]))
 		formatString: 0.00%
 
-	measure 'Reconciliation Breaches' = CALCULATE(COUNTROWS(Reconciliation), Reconciliation[Passed] = FALSE())
+	measure 'Reconciliation Breaches' = COALESCE(CALCULATE(COUNTROWS(Reconciliation), Reconciliation[Passed] = FALSE()), 0)
 		formatString: #,##0
 
 	measure 'Pipeline Health Status' =

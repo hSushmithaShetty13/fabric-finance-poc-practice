@@ -25,9 +25,12 @@ CALCULATE(
 )
 
 Failed Runs =
-CALCULATE(
-    COUNTROWS('Pipeline Runs'),
-    'Pipeline Runs'[Status] = "Failed"
+COALESCE(
+    CALCULATE(
+        COUNTROWS('Pipeline Runs'),
+        'Pipeline Runs'[Status] = "Failed"
+    ),
+    0
 )
 
 In Progress Runs =
@@ -63,13 +66,16 @@ DIVIDE(
 )
 
 Reconciliation Breaches =
-CALCULATE(
-    COUNTROWS('Reconciliation'),
-    'Reconciliation'[Passed] = FALSE()
+COALESCE(
+    CALCULATE(
+        COUNTROWS('Reconciliation'),
+        'Reconciliation'[Passed] = FALSE()
+    ),
+    0
 )
 
 DQ Failure Rows =
-SUM('Data Quality'[RowsFailed])
+COALESCE(SUM('Data Quality'[RowsFailed]), 0)
 
 DQ Rules Triggered =
 DISTINCTCOUNT('Data Quality'[RuleCode])
