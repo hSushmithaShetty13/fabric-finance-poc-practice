@@ -59,8 +59,11 @@ practice-repo/
 │   ├── audit-table-reference.md        ← audit table purpose, IDs, metrics, and tolerance
 │   ├── fabric-activator-setup.md       ← Power BI visual-based Activator rules
 │   └── lessons-learned.md              ← every real bug we hit + the fix (read this before you start!)
-└── 07-demo-script/
-    └── demo-runbook.md                 ← step-by-step rebuild + live-demo runbook
+├── 07-demo-script/
+│   └── demo-runbook.md                 ← step-by-step rebuild + live-demo runbook
+└── 08-ai-comparison/
+  ├── README.md                        ← prepared vs. unprepared finance semantic models
+  └── agent-and-verified-answer-runbook.md ← two agents, three verified answers, six test questions
 ```
 
 ## Architecture at a glance
@@ -126,6 +129,10 @@ pipeline changes needed.
   and [05-monitoring-model/monitoring-measures.dax](05-monitoring-model/monitoring-measures.dax).
 9. **Configure alerts** — use
   [06-monitoring/fabric-activator-setup.md](06-monitoring/fabric-activator-setup.md).
+10. **Compare AI readiness** — deploy the two finance models in
+  [08-ai-comparison/README.md](08-ai-comparison/README.md), then create the two Data Agents and
+  three Verified Answers using the
+  [agent runbook](08-ai-comparison/agent-and-verified-answer-runbook.md).
 
 **Read [06-monitoring/lessons-learned.md](06-monitoring/lessons-learned.md) before you start** — it
 documents every real error we hit (SQL-endpoint metadata sync lag, trigger-parameter serialization,

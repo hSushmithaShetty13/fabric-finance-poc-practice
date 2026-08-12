@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/semanticModel/copilot/schema/1.0.0/schema.json",
+  "tables": [
+    {
+      "name": "Date",
+      "visibility": "Visible",
+      "synonyms": ["Calendar", "Revenue Date", "Invoice Date"],
+      "columns": [
+        { "name": "Date Key", "visibility": "Hidden" },
+        { "name": "Date", "visibility": "Visible", "synonyms": ["Day", "Revenue Date"] },
+        { "name": "Year", "visibility": "Visible", "synonyms": ["Calendar Year"] },
+        { "name": "Quarter", "visibility": "Visible", "synonyms": ["Calendar Quarter"] },
+        { "name": "Month Number", "visibility": "Hidden" },
+        { "name": "Month Name", "visibility": "Visible", "synonyms": ["Month"] }
+      ],
+      "hierarchies": [
+        { "name": "Calendar Hierarchy", "visibility": "Visible", "synonyms": ["Date Hierarchy", "Calendar"] }
+      ]
+    },
+    {
+      "name": "Customer",
+      "visibility": "Visible",
+      "synonyms": ["Client", "Buyer", "Account"],
+      "columns": [
+        { "name": "Customer Key", "visibility": "Hidden" },
+        { "name": "Customer ID", "visibility": "Visible", "synonyms": ["Client ID"] },
+        { "name": "Customer Name", "visibility": "Visible", "synonyms": ["Client Name", "Customer"] },
+        { "name": "Country", "visibility": "Visible", "synonyms": ["Customer Country", "Market"] },
+        { "name": "Currency", "visibility": "Visible", "synonyms": ["Billing Currency"] },
+        { "name": "Credit Limit", "visibility": "Visible", "synonyms": ["Credit Ceiling"] },
+        { "name": "Is Active", "visibility": "Visible", "synonyms": ["Active Customer", "Customer Status"] },
+        { "name": "Is Current Record", "visibility": "Hidden" }
+      ]
+    },
+    {
+      "name": "GL Account",
+      "visibility": "Visible",
+      "synonyms": ["General Ledger Account", "Ledger Account", "GL"],
+      "columns": [
+        { "name": "GL Account Key", "visibility": "Hidden" },
+        { "name": "GL Account ID", "visibility": "Visible", "synonyms": ["GL Code", "Account Code"] },
+        { "name": "GL Account Name", "visibility": "Visible", "synonyms": ["Ledger Account Name"] },
+        { "name": "Account Type", "visibility": "Visible", "synonyms": ["GL Type", "Revenue Category"] }
+      ]
+    },
+    {
+      "name": "Revenue",
+      "visibility": "Visible",
+      "synonyms": ["Sales", "Turnover", "Invoice Revenue"],
+      "columns": [
+        { "name": "Revenue Key", "visibility": "Hidden" },
+        { "name": "Date Key", "visibility": "Hidden" },
+        { "name": "Customer Key", "visibility": "Hidden" },
+        { "name": "GL Account Key", "visibility": "Hidden" },
+        { "name": "Invoice ID", "visibility": "Visible", "synonyms": ["Invoice", "Order ID"] },
+        { "name": "Invoice Line ID", "visibility": "Hidden" },
+        { "name": "Quantity", "visibility": "Visible", "synonyms": ["Units"] },
+        { "name": "Unit Price", "visibility": "Visible", "synonyms": ["Price"] },
+        { "name": "Line Amount Source Currency", "visibility": "Hidden" },
+        { "name": "Exchange Rate to USD", "visibility": "Hidden" },
+        { "name": "Line Amount USD", "visibility": "Hidden" },
+        { "name": "Source Currency", "visibility": "Visible", "synonyms": ["Invoice Currency", "Local Currency"] }
+      ],
+      "measures": [
+        { "name": "Total Revenue USD", "visibility": "Visible", "synonyms": ["Revenue", "Sales", "Turnover", "Total Amount"] },
+        { "name": "Revenue in Source Currency", "visibility": "Visible", "synonyms": ["Local Revenue", "Original Currency Revenue"] },
+        { "name": "Invoice Count", "visibility": "Visible", "synonyms": ["Order Count", "Number of Invoices"] },
+        { "name": "Invoice Line Count", "visibility": "Visible", "synonyms": ["Line Count"] },
+        { "name": "Quantity Sold", "visibility": "Visible", "synonyms": ["Units Sold", "Volume"] },
+        { "name": "Average Revenue per Invoice USD", "visibility": "Visible", "synonyms": ["Average Invoice Value", "Revenue per Invoice", "Average Order Value"] },
+        { "name": "Revenue Customer Count", "visibility": "Visible", "synonyms": ["Customers with Revenue", "Buying Customers"] },
+        { "name": "Active Revenue Customer Count", "visibility": "Visible", "synonyms": ["Active Buying Customers"] },
+        { "name": "Revenue YTD USD", "visibility": "Visible", "synonyms": ["YTD Revenue", "Year to Date Sales"] },
+        { "name": "Revenue Previous Year USD", "visibility": "Visible", "synonyms": ["Prior Year Revenue", "Last Year Sales"] },
+        { "name": "Revenue Growth %", "visibility": "Visible", "synonyms": ["Revenue Growth", "YoY Growth", "Sales Growth"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+/// Calendar used for all revenue analysis. The reporting calendar is calendar-year based, from January through December.
+table Date
+
+	column 'Date Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: DateKey
+
+	/// Calendar date for revenue recognition and the primary date for all time analysis.
+	column Date
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: Date
+
+	/// Calendar year of the revenue date.
+	column Year
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: Year
+
+	/// Calendar quarter number from 1 through 4.
+	column Quarter
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: Quarter
+
+	/// Calendar month number from 1 through 12. Use to sort Month Name.
+	column 'Month Number'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: Month
+
+	/// Full calendar month name for grouping revenue.
+	column 'Month Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: MonthName
+		sortByColumn: 'Month Number'
+
+	hierarchy 'Calendar Hierarchy'
+		level Year
+			column: Year
+		level Quarter
+			column: Quarter
+		level Month
+			column: 'Month Name'
+		level Date
+			column: Date
+
+	partition Date = entity
+		mode: directLake
+		source
+			entityName: DimDate
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

@@ -1,0 +1,41 @@
+table DimDate
+	column DateKey
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: DateKey
+
+	column Date
+		dataType: dateTime
+		formatString: Short Date
+		sourceColumn: Date
+
+	column Year
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: Year
+
+	column Quarter
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: Quarter
+
+	column Month
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: Month
+
+	column MonthName
+		dataType: string
+		summarizeBy: none
+		sourceColumn: MonthName
+
+	partition DimDate = entity
+		mode: directLake
+		source
+			entityName: DimDate
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

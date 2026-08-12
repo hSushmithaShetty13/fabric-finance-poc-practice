@@ -1,0 +1,136 @@
+/// Invoice-line revenue fact table. Each row is one invoice line; USD measures use the converted Line Amount USD value.
+table Revenue
+
+	/// Recognized invoice-line revenue converted to USD. Use this measure whenever users ask for revenue, sales, turnover, or amount without a currency.
+	measure 'Total Revenue USD' = SUM(Revenue[Line Amount USD])
+		formatString: $#,0.00;($#,0.00);$0.00
+
+	/// Invoice-line revenue before USD conversion. Use only when the user explicitly asks for source or local currency value.
+	measure 'Revenue in Source Currency' = SUM(Revenue[Line Amount Source Currency])
+		formatString: #,0.00
+
+	/// Distinct number of invoices represented by revenue lines. Use for invoice or order count questions.
+	measure 'Invoice Count' = DISTINCTCOUNT(Revenue[Invoice ID])
+		formatString: #,0
+
+	/// Number of invoice lines. Do not use as invoice count because one invoice can contain several lines.
+	measure 'Invoice Line Count' = COUNTROWS(Revenue)
+		formatString: #,0
+
+	/// Total units on recognized invoice lines.
+	measure 'Quantity Sold' = SUM(Revenue[Quantity])
+		formatString: #,0
+
+	/// Total Revenue USD divided by distinct Invoice Count. Use for average invoice value or revenue per invoice.
+	measure 'Average Revenue per Invoice USD' = DIVIDE([Total Revenue USD], [Invoice Count])
+		formatString: $#,0.00;($#,0.00);$0.00
+
+	/// Distinct customers with at least one recognized revenue line in the current filter context.
+	measure 'Revenue Customer Count' = DISTINCTCOUNT(Revenue[Customer Key])
+		formatString: #,0
+
+	/// Distinct active customers with recognized revenue in the current filter context.
+	measure 'Active Revenue Customer Count' = CALCULATE([Revenue Customer Count], KEEPFILTERS(Customer[Is Active] = TRUE()))
+		formatString: #,0
+
+	/// Calendar year-to-date Total Revenue USD using the revenue date. The calendar year begins January 1.
+	measure 'Revenue YTD USD' = TOTALYTD([Total Revenue USD], Date[Date])
+		formatString: $#,0.00;($#,0.00);$0.00
+
+	/// Total Revenue USD for the equivalent date period one calendar year earlier.
+	measure 'Revenue Previous Year USD' = CALCULATE([Total Revenue USD], SAMEPERIODLASTYEAR(Date[Date]))
+		formatString: $#,0.00;($#,0.00);$0.00
+
+	/// Percentage change in Total Revenue USD versus the equivalent prior-year period. Positive means revenue increased.
+	measure 'Revenue Growth %' = DIVIDE([Total Revenue USD] - [Revenue Previous Year USD], [Revenue Previous Year USD])
+		formatString: 0.00%;-0.00%;0.00%
+
+	column 'Revenue Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: RevenueKey
+
+	column 'Date Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: DateKey
+
+	column 'Customer Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: CustomerKey
+
+	column 'GL Account Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: GLAccountKey
+
+	/// Business identifier of the invoice. Use the Invoice Count measure to count invoices.
+	column 'Invoice ID'
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: InvoiceID
+
+	/// Identifier of one line within an invoice. Use Invoice Line Count to count lines.
+	column 'Invoice Line ID'
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: LineID
+
+	/// Number of units on the invoice line. Use Quantity Sold for aggregation.
+	column Quantity
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: Quantity
+
+	/// Price per unit in Source Currency before conversion to USD.
+	column 'Unit Price'
+		dataType: decimal
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: UnitPrice
+
+	/// Quantity multiplied by Unit Price in Source Currency. Do not combine currencies without grouping by Source Currency.
+	column 'Line Amount Source Currency'
+		dataType: decimal
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: LineAmount
+
+	/// Conversion rate applied to the source-currency line amount to calculate Line Amount USD.
+	column 'Exchange Rate to USD'
+		dataType: decimal
+		formatString: 0.000000
+		summarizeBy: none
+		sourceColumn: ExchangeRate
+
+	/// Recognized invoice-line amount converted to USD. Use Total Revenue USD for aggregation.
+	column 'Line Amount USD'
+		dataType: decimal
+		formatString: $#,0.00
+		summarizeBy: none
+		sourceColumn: LineAmountUSD
+
+	/// Three-letter currency code of the original invoice amount before USD conversion.
+	column 'Source Currency'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SourceCurrency
+
+	partition Revenue = entity
+		mode: directLake
+		source
+			entityName: FactRevenue
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

@@ -1,0 +1,35 @@
+/// General ledger account reference used to analyze recognized revenue by account and account type.
+table 'GL Account'
+
+	column 'GL Account Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: GLAccountKey
+
+	/// Stable business identifier for the general ledger account. Do not aggregate this number.
+	column 'GL Account ID'
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: GLAccountID
+
+	/// Business name of the general ledger account used for revenue classification.
+	column 'GL Account Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: AccountName
+
+	/// Finance classification of the general ledger account.
+	column 'Account Type'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: AccountType
+
+	partition 'GL Account' = entity
+		mode: directLake
+		source
+			entityName: DimGLAccount
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

@@ -1,0 +1,61 @@
+/// Current and historical customer records used to analyze revenue by customer, country, currency, and active status.
+table Customer
+
+	column 'Customer Key'
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: CustomerKey
+
+	/// Stable business identifier for a customer. Do not aggregate this number.
+	column 'Customer ID'
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: CustomerID
+
+	/// Business name of the customer. Use this field when ranking or grouping customers.
+	column 'Customer Name'
+		dataType: string
+		summarizeBy: none
+		sourceColumn: CustomerName
+
+	/// Two-letter country code associated with the customer record.
+	column Country
+		dataType: string
+		summarizeBy: none
+		sourceColumn: CountryCode
+
+	/// Customer billing currency represented by a three-letter currency code.
+	column Currency
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Currency
+
+	/// Customer credit limit in the customer's billing currency. Do not use this as revenue.
+	column 'Credit Limit'
+		dataType: decimal
+		formatString: #,0.00
+		summarizeBy: none
+		sourceColumn: CreditLimit
+
+	/// True when the customer is operationally active in the source system.
+	column 'Is Active'
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: IsActive
+
+	/// True for the current SCD2 customer version. Revenue relationships already resolve to current records.
+	column 'Is Current Record'
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: IsCurrent
+
+	partition Customer = entity
+		mode: directLake
+		source
+			entityName: DimCustomer
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/semanticModel/copilot/examplePrompts/1.0.0/schema.json",
+  "prompts": [
+    "What is total revenue in USD by month?",
+    "Who are the top 10 customers by total revenue in USD?",
+    "Show total revenue in USD by GL account type.",
+    "How did revenue grow year over year by month?",
+    "How many active customers generated revenue by country?",
+    "What is the average revenue per invoice in USD by source currency?"
+  ]
+}

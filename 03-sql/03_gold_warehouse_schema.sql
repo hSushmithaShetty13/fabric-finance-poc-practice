@@ -246,12 +246,11 @@ BEGIN
 END
 GO
 
--------------------------------------------------------------------------------
--- Seed DimDate (2025-01-01 .. 2026-12-31) -- static calendar, no pipeline needed
+-- Seed DimDate (2025-01-01 .. 2027-12-31) -- static calendar, no pipeline needed
 -------------------------------------------------------------------------------
 ;WITH d0 AS (SELECT n FROM (VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) t(n)),
- nums AS (SELECT a.n + b.n*10 + c.n*100 AS num FROM d0 a CROSS JOIN d0 b CROSS JOIN d0 c),
- days AS (SELECT DATEADD(DAY, num, CAST('2025-01-01' AS DATE)) AS dt FROM nums WHERE num BETWEEN 0 AND 729)
+ nums AS (SELECT a.n + b.n*10 + c.n*100 + d.n*1000 AS num FROM d0 a CROSS JOIN d0 b CROSS JOIN d0 c CROSS JOIN d0 d),
+ days AS (SELECT DATEADD(DAY, num, CAST('2025-01-01' AS DATE)) AS dt FROM nums WHERE num BETWEEN 0 AND 1094)
 INSERT INTO gold.DimDate (DateKey, [Date], [Year], [Quarter], [Month], MonthName, [Day], IsWeekend)
 SELECT CONVERT(INT, CONVERT(VARCHAR(8), dt, 112)), dt,
        DATEPART(YEAR, dt), DATEPART(QUARTER, dt), DATEPART(MONTH, dt),

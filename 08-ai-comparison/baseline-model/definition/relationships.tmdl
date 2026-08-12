@@ -1,0 +1,11 @@
+relationship RevenueDate
+	fromColumn: FactRevenue.DateKey
+	toColumn: DimDate.DateKey
+
+relationship RevenueCustomer
+	fromColumn: FactRevenue.CustomerKey
+	toColumn: DimCustomer.CustomerKey
+
+relationship RevenueAccount
+	fromColumn: FactRevenue.GLAccountKey
+	toColumn: DimGLAccount.GLAccountKey

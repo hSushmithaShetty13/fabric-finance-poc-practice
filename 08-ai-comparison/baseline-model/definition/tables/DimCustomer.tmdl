@@ -1,0 +1,50 @@
+table DimCustomer
+	column CustomerKey
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: CustomerKey
+
+	column CustomerID
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: CustomerID
+
+	column CustomerName
+		dataType: string
+		summarizeBy: none
+		sourceColumn: CustomerName
+
+	column CountryCode
+		dataType: string
+		summarizeBy: none
+		sourceColumn: CountryCode
+
+	column Currency
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Currency
+
+	column CreditLimit
+		dataType: decimal
+		formatString: 0.00
+		summarizeBy: sum
+		sourceColumn: CreditLimit
+
+	column IsActive
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: IsActive
+
+	column IsCurrent
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: IsCurrent
+
+	partition DimCustomer = entity
+		mode: directLake
+		source
+			entityName: DimCustomer
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

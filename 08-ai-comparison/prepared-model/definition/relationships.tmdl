@@ -1,0 +1,11 @@
+relationship 'Revenue to Date'
+	fromColumn: Revenue.'Date Key'
+	toColumn: Date.'Date Key'
+
+relationship 'Revenue to Customer'
+	fromColumn: Revenue.'Customer Key'
+	toColumn: Customer.'Customer Key'
+
+relationship 'Revenue to GL Account'
+	fromColumn: Revenue.'GL Account Key'
+	toColumn: 'GL Account'.'GL Account Key'

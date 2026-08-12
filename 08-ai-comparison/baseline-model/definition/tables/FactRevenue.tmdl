@@ -1,0 +1,87 @@
+table FactRevenue
+	measure Amount = SUM(FactRevenue[LineAmount])
+		formatString: 0.00
+
+	measure Count = COUNTROWS(FactRevenue)
+		formatString: 0
+
+	measure Avg = AVERAGE(FactRevenue[UnitPrice])
+		formatString: 0.00
+
+	column RevenueKey
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: RevenueKey
+
+	column DateKey
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: DateKey
+
+	column CustomerKey
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: CustomerKey
+
+	column GLAccountKey
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: GLAccountKey
+
+	column InvoiceID
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: InvoiceID
+
+	column LineID
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: LineID
+
+	column Quantity
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+	column UnitPrice
+		dataType: decimal
+		formatString: 0.00
+		summarizeBy: sum
+		sourceColumn: UnitPrice
+
+	column LineAmount
+		dataType: decimal
+		formatString: 0.00
+		summarizeBy: sum
+		sourceColumn: LineAmount
+
+	column ExchangeRate
+		dataType: decimal
+		formatString: 0.000000
+		summarizeBy: sum
+		sourceColumn: ExchangeRate
+
+	column LineAmountUSD
+		dataType: decimal
+		formatString: 0.00
+		summarizeBy: sum
+		sourceColumn: LineAmountUSD
+
+	column SourceCurrency
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SourceCurrency
+
+	partition FactRevenue = entity
+		mode: directLake
+		source
+			entityName: FactRevenue
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

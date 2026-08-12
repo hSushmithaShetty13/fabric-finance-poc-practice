@@ -1,0 +1,29 @@
+table DimGLAccount
+	column GLAccountKey
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: GLAccountKey
+
+	column GLAccountID
+		dataType: int64
+		formatString: 0
+		summarizeBy: sum
+		sourceColumn: GLAccountID
+
+	column AccountName
+		dataType: string
+		summarizeBy: none
+		sourceColumn: AccountName
+
+	column AccountType
+		dataType: string
+		summarizeBy: none
+		sourceColumn: AccountType
+
+	partition DimGLAccount = entity
+		mode: directLake
+		source
+			entityName: DimGLAccount
+			schemaName: gold
+			expressionSource: DL_WH_Finance_Gold

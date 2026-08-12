@@ -1,0 +1,19 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+
+expression 'DL_WH_Finance_Gold' =
+		let
+			Source = AzureStorage.DataLake("https://onelake.dfs.fabric.microsoft.com/ad5bf890-cd6e-4786-b69c-15876240823d/d88b4acf-a3ee-4568-aa66-8403b6b9ceaa", [HierarchicalNavigation=true])
+		in
+			Source
+
+ref table Date
+ref table Customer
+ref table 'GL Account'
+ref table Revenue
+
+ref relationship 'Revenue to Date'
+ref relationship 'Revenue to Customer'
+ref relationship 'Revenue to GL Account'
