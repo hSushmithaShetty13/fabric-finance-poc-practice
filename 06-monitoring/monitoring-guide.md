@@ -41,6 +41,9 @@ progress in real time.
 The Warehouse is the durable operational record. Connect to `WH_Finance_Gold` with `sqlcmd`, the
 Warehouse SQL editor, or a semantic model.
 
+For a concise explanation of every audit table, run-ID level, row metric, and reconciliation
+tolerance, see [audit-table-reference.md](audit-table-reference.md).
+
 ### Current run status
 
 ```sql
@@ -241,6 +244,7 @@ Example query:
 
 ```sql
 SELECT PipelineRunId,
+    RootRunId,
        PipelineName,
        ActivityName,
        ActivityType,
@@ -250,6 +254,8 @@ SELECT PipelineRunId,
        RowsRead,
        RowsWritten,
        RowsRejected,
+    RowsInserted,
+    RowsUpdated,
        StartTimeUtc,
        EndTimeUtc,
        DurationSeconds,
@@ -263,6 +269,10 @@ Copy movement, DQ classification, and Gold stored-procedure work. You can extend
 `audit.sp_log_activity` pattern to also log `Wait` and `ExecutePipeline` wrapper activities if you
 want every single canvas node represented, but the current setup already supports practical
 debugging of row movement, DQ classification, and Gold processing.
+
+`RowsRead` and `RowsWritten` apply to Copy activities. `RowsInserted` and `RowsUpdated` apply to
+Gold stored procedures. Null means the metric is not applicable or was not emitted by that
+activity; it does not mean that the activity processed zero rows.
 
 ### Failure branch behavior
 

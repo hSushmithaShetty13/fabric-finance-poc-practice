@@ -1,7 +1,7 @@
 # Finance Operations Monitoring — Direct Lake Report Blueprint
 
-Semantic model: `Finance Operations Monitoring Direct Lake`
-Model ID: `a1258c49-b4ba-4612-9034-c45ad1401857`
+Semantic model: `SM_Finance_Operations_Monitoring`
+Model ID: `7661cb57-8c49-4e1b-a32c-f49661b4e5f6`
 Storage mode: Direct Lake
 
 Use physical Warehouse tables as the Direct Lake source:
@@ -45,7 +45,7 @@ Mapping:
 - Start: `Activity Runs[StartTimeUtc]`
 - End: `Activity Runs[EndTimeUtc]`
 - Legend: `Activity Runs[Status]`
-- Tooltip: `EntityName`, `Layer`, `DurationSeconds`, `RowsRead`, `RowsWritten`, `ErrorMessage`
+- Tooltip: `EntityName`, `Layer`, `DurationSeconds`, `RowsRead`, `RowsWritten`, `RowsInserted`, `RowsUpdated`, `ErrorMessage`
 
 Fallback: table visual over the same fields.
 
@@ -73,7 +73,10 @@ Visuals:
 
 - Bar chart: `Activity Runs[ActivityName]` by `[Average Activity Duration Seconds]`
 - Matrix: rows `PipelineName`, `ActivityName`; columns `Status`; values count of `ActivityRunId`
-- Table: `PipelineRunId`, `PipelineName`, `ActivityName`, `ActivityType`, `EntityName`, `Layer`, `Status`, `RowsRead`, `RowsWritten`, `RowsRejected`, `ErrorCode`, `ErrorMessage`
+- Table: `RootRunId`, `PipelineRunId`, `PipelineName`, `ActivityName`, `ActivityType`, `EntityName`, `Layer`, `Status`, `RowsRead`, `RowsWritten`, `RowsRejected`, `RowsInserted`, `RowsUpdated`, `ErrorCode`, `ErrorMessage`
+
+Use `RootRunId` to filter one complete master orchestration. Use `PipelineRunId` to isolate one
+Bronze, Silver, Gold, or master pipeline execution within that orchestration.
 
 ## Direct Lake validation checklist
 

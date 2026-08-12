@@ -1,7 +1,7 @@
 # Power BI Monitoring Dashboard Build Guide
 
 Build this report in the same workspace as the PoC (`WS_Finance_POC`) using the semantic model
-`Finance Operations Monitoring Direct Lake` (`a1258c49-b4ba-4612-9034-c45ad1401857`) in
+`SM_Finance_Operations_Monitoring` (`7661cb57-8c49-4e1b-a32c-f49661b4e5f6`) in
 **Direct Lake** mode over the physical Warehouse tables:
 
 - `audit.PipelineRun`
@@ -34,6 +34,7 @@ Hide technical IDs after relationships are created:
 
 - `RunId`
 - `ParentRunId`
+- `RootRunId`
 - `ActivityRunId`
 
 Keep these business fields visible:
@@ -47,7 +48,7 @@ Keep these business fields visible:
 - `StartTimeUtc`
 - `EndTimeUtc`
 - `DurationSeconds`
-- `RowsRead`, `RowsWritten`, `RowsRejected`
+- `RowsRead`, `RowsWritten`, `RowsRejected`, `RowsInserted`, `RowsUpdated`
 - `RuleCode`, `RuleDescription`, `Severity`, `RowsFailed`
 - `VariancePct`, `TolerancePct`, `Passed`
 

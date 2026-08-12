@@ -47,6 +47,12 @@ SUM('Activity Runs'[RowsRead])
 Total Rows Written =
 SUM('Activity Runs'[RowsWritten])
 
+Total Rows Inserted =
+SUM('Activity Runs'[RowsInserted])
+
+Total Rows Updated =
+SUM('Activity Runs'[RowsUpdated])
+
 Total Rows Processed =
 SUM('Reconciliation'[TargetRowCount])
 

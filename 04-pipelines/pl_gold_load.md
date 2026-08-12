@@ -35,8 +35,9 @@ flowchart LR
 ### 1. `SP_Log_Start` — `PipelineName='PL_GOLD_LOAD'`, `EntityName='ALL'`.
 
 ### 2/3. `SP_Upsert_DimCustomer` / `SP_Upsert_DimGLAccount` (Stored Procedures, run in parallel)
-No parameters — both procs read all of `LH_Finance.dbo.Silver_Customers` /
-`LH_Finance.dbo.Silver_GLAccounts` directly.
+Pass `PipelineRunId=<p_run_id>` to both procedures. They read all of
+`LH_Finance.dbo.Silver_Customers` / `LH_Finance.dbo.Silver_GLAccounts` directly and write their
+own `audit.ActivityRun` row with exact `RowsInserted` and `RowsUpdated` values.
 
 - `gold.SP_UpsertDimCustomer` — **SCD2**: closes out (`IsCurrent=0`, sets `ValidToUtc`) any
   existing current row whose attributes changed (hash comparison), then inserts new/changed rows
@@ -54,6 +55,11 @@ No parameters — both procs read all of `LH_Finance.dbo.Silver_Customers` /
 `1.0` if no match), then inner-joins to `gold.DimCustomer`/`gold.DimGLAccount` (which naturally
 excludes orphaned customers/accounts). Filters `InvoiceDate IS NOT NULL AND Quantity > 0 AND
 UnitPrice IS NOT NULL`.
+
+The procedure writes its own `audit.ActivityRun` row with `RowsInserted`. The pipeline therefore
+depends directly on these three business procedures; separate post-procedure audit wrapper
+activities are intentionally not used because concurrent replacement of the same audit row can
+cause Fabric Warehouse snapshot-isolation conflicts.
 
 ### 5. `SP_Run_Gold_Validation` → `audit.SP_RunGoldValidation @PipelineRunId=<p_run_id>`
 Three rules, each writing a Pass/Fail row to `audit.ValidationLog`:

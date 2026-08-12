@@ -56,6 +56,7 @@ practice-repo/
 │   └── exports/                        ← the exact, working pipeline-content.json for all 4 pipelines
 ├── 06-monitoring/
 │   ├── monitoring-guide.md             ← Monitoring hub, audit SQL, reconciliation, alerts
+│   ├── audit-table-reference.md        ← audit table purpose, IDs, metrics, and tolerance
 │   ├── fabric-activator-setup.md       ← Power BI visual-based Activator rules
 │   └── lessons-learned.md              ← every real bug we hit + the fix (read this before you start!)
 └── 07-demo-script/
@@ -117,7 +118,9 @@ pipeline changes needed.
   automated trigger.
 6. **Verify** — query `audit.PipelineRunLog` and `audit.ValidationLog` in `WH_Finance_Gold`.
 7. **Monitor it** — follow [06-monitoring/monitoring-guide.md](06-monitoring/monitoring-guide.md)
-  for Monitoring hub, audit queries, reconciliation, troubleshooting, and alerting options.
+  for Monitoring hub, audit queries, reconciliation, troubleshooting, and alerting options. Use
+  [06-monitoring/audit-table-reference.md](06-monitoring/audit-table-reference.md) to explain the
+  purpose and significance of each audit table and metric.
 8. **Build the Power BI dashboard** — use
   [05-monitoring-model/powerbi-dashboard-build-guide.md](05-monitoring-model/powerbi-dashboard-build-guide.md)
   and [05-monitoring-model/monitoring-measures.dax](05-monitoring-model/monitoring-measures.dax).

@@ -9,6 +9,12 @@ table 'Activity Runs'
 	measure 'Total Rows Written' = SUM('Activity Runs'[RowsWritten])
 		formatString: #,##0
 
+	measure 'Total Rows Inserted' = SUM('Activity Runs'[RowsInserted])
+		formatString: #,##0
+
+	measure 'Total Rows Updated' = SUM('Activity Runs'[RowsUpdated])
+		formatString: #,##0
+
 	column ActivityRunId
 		dataType: string
 		isHidden
@@ -20,6 +26,12 @@ table 'Activity Runs'
 		isHidden
 		summarizeBy: none
 		sourceColumn: PipelineRunId
+
+	column RootRunId
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: RootRunId
 
 	column PipelineName
 		dataType: string
@@ -76,6 +88,18 @@ table 'Activity Runs'
 		isHidden
 		summarizeBy: sum
 		sourceColumn: RowsRejected
+
+	column RowsInserted
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: RowsInserted
+
+	column RowsUpdated
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: RowsUpdated
 
 	column ErrorCode
 		dataType: string

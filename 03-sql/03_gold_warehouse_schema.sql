@@ -97,9 +97,14 @@ GO
 IF OBJECT_ID('gold.SP_UpsertDimCustomer') IS NOT NULL DROP PROCEDURE gold.SP_UpsertDimCustomer;
 GO
 CREATE PROCEDURE gold.SP_UpsertDimCustomer
+    @PipelineRunId VARCHAR(100)
 AS
 BEGIN
     SET NOCOUNT ON;
+    DECLARE @StartTimeUtc DATETIME2(3)=SYSUTCDATETIME();
+    DECLARE @ActivityRunId VARCHAR(100)=CONCAT(@PipelineRunId,'-dc');
+    DECLARE @RowsInserted BIGINT=0;
+    DECLARE @RowsUpdated BIGINT=0;
 
     ;WITH dedup AS (
         SELECT s.*, ROW_NUMBER() OVER (PARTITION BY s.CustomerID ORDER BY s.CreatedDate DESC) AS rn
@@ -118,7 +123,13 @@ BEGIN
     JOIN src ON src.CustomerID = tgt.CustomerID AND tgt.IsCurrent = 1
     WHERE HASHBYTES('SHA1', CONCAT_WS('|', tgt.CustomerName, tgt.CountryCode, tgt.Currency, tgt.IsActive))
        <> HASHBYTES('SHA1', CONCAT_WS('|', src.CustomerName, src.CountryCode, src.Currency, src.IsActive));
+    SET @RowsUpdated=@@ROWCOUNT;
 
+    ;WITH dedup AS (
+        SELECT s.*, ROW_NUMBER() OVER (PARTITION BY s.CustomerID ORDER BY s.CreatedDate DESC) AS rn
+        FROM LH_Finance.dbo.Silver_Customers s
+        WHERE s.CustomerName IS NOT NULL AND LEN(s.Country) = 2
+    )
     INSERT INTO gold.DimCustomer
         (CustomerKey, CustomerID, CustomerName, CountryCode, Currency, CreditLimit, IsActive,
          ValidFromUtc, ValidToUtc, IsCurrent)
@@ -130,6 +141,15 @@ BEGIN
     WHERE s.rn = 1
       AND NOT EXISTS (
         SELECT 1 FROM gold.DimCustomer d WHERE d.CustomerID = s.CustomerID AND d.IsCurrent = 1);
+        SET @RowsInserted=@@ROWCOUNT;
+        DECLARE @EndTimeUtc DATETIME2(3)=SYSUTCDATETIME();
+
+        EXEC audit.SP_LogDedicatedActivity
+                @ActivityRunId=@ActivityRunId,@PipelineRunId=@PipelineRunId,
+                @PipelineName='PL_GOLD_LOAD',@ActivityName='SP_Upsert_DimCustomer',
+                @ActivityType='StoredProcedure',@EntityName='ALL',@Layer='Gold',
+                @StartTimeUtc=@StartTimeUtc,@EndTimeUtc=@EndTimeUtc,@Status='Succeeded',
+                @RowsInserted=@RowsInserted,@RowsUpdated=@RowsUpdated;
 END
 GO
 
@@ -139,15 +159,29 @@ GO
 IF OBJECT_ID('gold.SP_UpsertDimGLAccount') IS NOT NULL DROP PROCEDURE gold.SP_UpsertDimGLAccount;
 GO
 CREATE PROCEDURE gold.SP_UpsertDimGLAccount
+    @PipelineRunId VARCHAR(100)
 AS
 BEGIN
     SET NOCOUNT ON;
+    DECLARE @StartTimeUtc DATETIME2(3)=SYSUTCDATETIME();
+    DECLARE @ActivityRunId VARCHAR(100)=CONCAT(@PipelineRunId,'-dg');
+    DECLARE @RowsInserted BIGINT=0;
+
     DELETE FROM gold.DimGLAccount;
     INSERT INTO gold.DimGLAccount (GLAccountKey, GLAccountID, AccountName, AccountType, IsActive)
     SELECT ROW_NUMBER() OVER (ORDER BY GLAccountID), GLAccountID,
            ISNULL(NULLIF(AccountName,''), CONCAT('Account ', GLAccountID)), AccountType,
            CAST(TRY_CAST(IsActive AS INT) AS BIT)
     FROM LH_Finance.dbo.Silver_GLAccounts;
+    SET @RowsInserted=@@ROWCOUNT;
+    DECLARE @EndTimeUtc DATETIME2(3)=SYSUTCDATETIME();
+
+    EXEC audit.SP_LogDedicatedActivity
+        @ActivityRunId=@ActivityRunId,@PipelineRunId=@PipelineRunId,
+        @PipelineName='PL_GOLD_LOAD',@ActivityName='SP_Upsert_DimGLAccount',
+        @ActivityType='StoredProcedure',@EntityName='ALL',@Layer='Gold',
+        @StartTimeUtc=@StartTimeUtc,@EndTimeUtc=@EndTimeUtc,@Status='Succeeded',
+        @RowsInserted=@RowsInserted,@RowsUpdated=0;
 END
 GO
 
@@ -162,6 +196,9 @@ CREATE PROCEDURE gold.SP_LoadFactRevenue
 AS
 BEGIN
     SET NOCOUNT ON;
+    DECLARE @StartTimeUtc DATETIME2(3)=SYSUTCDATETIME();
+    DECLARE @ActivityRunId VARCHAR(100)=CONCAT(@LoadRunId,'-fr');
+    DECLARE @RowsInserted BIGINT=0;
 
     IF @LoadType = 'Full'
         DELETE FROM gold.FactRevenue;
@@ -197,6 +234,15 @@ BEGIN
     JOIN gold.DimCustomer  AS dc ON dc.CustomerID = s.CustomerID AND dc.IsCurrent = 1
     JOIN gold.DimGLAccount AS dg ON dg.GLAccountID = s.GLAccountID
     WHERE s.InvoiceDate IS NOT NULL AND s.Quantity > 0 AND s.UnitPrice IS NOT NULL;
+    SET @RowsInserted=@@ROWCOUNT;
+    DECLARE @EndTimeUtc DATETIME2(3)=SYSUTCDATETIME();
+
+    EXEC audit.SP_LogDedicatedActivity
+        @ActivityRunId=@ActivityRunId,@PipelineRunId=@LoadRunId,
+        @PipelineName='PL_GOLD_LOAD',@ActivityName='SP_Load_FactRevenue',
+        @ActivityType='StoredProcedure',@EntityName='ALL',@Layer='Gold',
+        @StartTimeUtc=@StartTimeUtc,@EndTimeUtc=@EndTimeUtc,@Status='Succeeded',
+        @RowsInserted=@RowsInserted,@RowsUpdated=0;
 END
 GO
 

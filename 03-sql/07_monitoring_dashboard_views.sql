@@ -32,6 +32,7 @@ CREATE OR ALTER VIEW audit.activity_run
 AS
 SELECT
     PipelineRunId AS run_id,
+    RootRunId AS root_run_id,
     ActivityRunId AS activity_run_id,
     PipelineName AS pipeline_name,
     ActivityName AS activity_name,
@@ -45,6 +46,8 @@ SELECT
     RowsRead AS rows_read,
     RowsWritten AS rows_written,
     RowsRejected AS rows_rejected,
+    RowsInserted AS rows_inserted,
+    RowsUpdated AS rows_updated,
     CAST(NULL AS BIGINT) AS rows_skipped,
     ErrorCode AS error_code,
     ErrorMessage AS error_message,

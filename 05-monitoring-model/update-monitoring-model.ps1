@@ -28,7 +28,7 @@ $bodyFile = [System.IO.Path]::GetTempFileName()
 [System.IO.File]::WriteAllText($bodyFile, $body, [System.Text.UTF8Encoding]::new($false))
 try {
     Write-Output "Updating semantic model $SemanticModelId with Direct Lake TMDL..."
-    az rest --method post --resource $resource --url "$api/workspaces/$WorkspaceId/semanticModels/$SemanticModelId/updateDefinition?updateMetadata=true" --headers "Content-Type=application/json" --body "@$bodyFile"
+    az rest --method post --resource $resource --url "$api/workspaces/$WorkspaceId/semanticModels/$SemanticModelId/updateDefinition" --headers "Content-Type=application/json" --body "@$bodyFile"
 }
 finally {
     Remove-Item $bodyFile -ErrorAction SilentlyContinue

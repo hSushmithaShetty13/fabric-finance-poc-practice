@@ -9,6 +9,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     DECLARE @StartTimeUtc DATETIME2(3)=SYSUTCDATETIME();
+    DECLARE @ActivityRunId VARCHAR(100)=CONCAT(@PipelineRunId,'-start');
     DELETE FROM audit.PipelineRunLog WHERE PipelineRunId=@PipelineRunId AND (EntityName=@EntityName OR @EntityName IS NULL);
     INSERT INTO audit.PipelineRunLog
     (PipelineRunId,ParentRunId,PipelineName,Environment,LoadType,EntityName,SourceSystem,RunDate,StartTime,[Status],TriggeredBy,LoggedAt)
@@ -17,7 +18,7 @@ BEGIN
     EXEC audit.SP_LogDedicatedPipelineRun @RunId=@PipelineRunId,@ParentRunId=@ParentRunId,@PipelineName=@PipelineName,
         @Environment=@Environment,@LoadType=@LoadType,@EntityName=@EntityName,@SourceSystem=@SourceSystem,
         @RunDate=@RunDate,@Status='Running',@StartTimeUtc=@StartTimeUtc,@TriggeredBy=@TriggeredBy;
-    EXEC audit.SP_LogDedicatedActivity @ActivityRunId=@PipelineRunId,@PipelineRunId=@PipelineRunId,
+    EXEC audit.SP_LogDedicatedActivity @ActivityRunId=@ActivityRunId,@PipelineRunId=@PipelineRunId,
         @PipelineName=@PipelineName,@ActivityName='PipelineStart',@ActivityType='Pipeline',@EntityName=@EntityName,
         @Layer=NULL,@StartTimeUtc=@StartTimeUtc,@EndTimeUtc=@StartTimeUtc,@Status='Succeeded';
     SELECT @PipelineRunId AS RunID;
@@ -47,6 +48,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     DECLARE @EndTime DATETIME2(3)=SYSUTCDATETIME();
+    DECLARE @ActivityRunId VARCHAR(100)=CONCAT(@PipelineRunId,'-end');
     UPDATE audit.PipelineRunLog
     SET EndTime=@EndTime,[Status]=@Status,ErrorMessage=@ErrorMessage,
         DurationSeconds=DATEDIFF(SECOND,StartTime,@EndTime)
@@ -67,7 +69,7 @@ BEGIN
         @Environment=@Environment,@LoadType=@LoadType,@EntityName=@EntityName,
         @SourceSystem=@SourceSystem,@RunDate=@RunDate,@Status=@Status,@StartTimeUtc=@EffectiveStartTime,
         @EndTimeUtc=@EndTime,@ErrorMessage=@ErrorMessage,@TriggeredBy=@TriggeredBy;
-    EXEC audit.SP_LogDedicatedActivity @ActivityRunId=@PipelineRunId,@PipelineRunId=@PipelineRunId,
+    EXEC audit.SP_LogDedicatedActivity @ActivityRunId=@ActivityRunId,@PipelineRunId=@PipelineRunId,
         @PipelineName=@PipelineName,@ActivityName='PipelineEnd',@ActivityType='Pipeline',@EntityName=@EntityName,
         @StartTimeUtc=@EffectiveStartTime,@EndTimeUtc=@EndTime,@Status=@Status,@ErrorMessage=@ErrorMessage;
 END
