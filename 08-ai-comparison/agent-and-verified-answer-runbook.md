@@ -11,31 +11,33 @@
 
 The Fabric definition API persisted the TMDL but omitted `Copilot/` parts during live create and update validation. The service UI is therefore the authoritative authoring path for these Prep-for-AI settings in this workspace.
 
-## Create the unprepared agent
+## Deployed unprepared agent
 
-1. In `WS_Finance_POC`, select **New item** > **Data Agent**.
-2. Name it `DA_Finance_AI_Unprepared`.
-3. Add the Power BI semantic model `SM_Finance_AI_Unprepared`.
-4. Select all four model tables.
-5. Use this intentionally vague agent instruction:
+- Name: `DA_Finance_AI_Unprepared`
+- Fabric item ID: `929e9cab-963e-4def-b675-15765a337ac1`
+- Status: Published
+- Microsoft 365 Agent Store: Off
+- Semantic model: `SM_Finance_AI_Unprepared`
+- Selected tables: `DimCustomer`, `DimDate`, `DimGLAccount`, `FactRevenue`
+- Published description: `Baseline finance agent connected to the intentionally unprepared semantic model for AI-readiness comparison testing.`
+- Intentionally vague agent instruction:
 
-   > Answer finance questions using the available model. Be helpful and concise.
-
-6. Publish the agent.
+  > Answer finance questions using the available model. Be helpful and concise.
 
 This instruction deliberately does not define revenue currency, invoice grain, primary date, time logic, or preferred fields. It demonstrates that agent-level prose cannot repair an ambiguous semantic model.
 
-## Create the prepared agent
+## Deployed prepared agent
 
-1. In `WS_Finance_POC`, select **New item** > **Data Agent**.
-2. Name it `DA_Finance_AI_Ready`.
-3. Add the Power BI semantic model `SM_Finance_AI_Ready`.
-4. Select `Date`, `Customer`, `GL Account`, and `Revenue`.
-5. Use these agent instructions:
+- Name: `DA_Finance_AI_Ready`
+- Fabric item ID: `4cab8429-5bda-4973-b267-63962b515c46`
+- Status: Published
+- Microsoft 365 Agent Store: Off
+- Semantic model: `SM_Finance_AI_Ready`
+- Selected tables: `Date`, `Customer`, `GL Account`, `Revenue`
+- Published description: `AI-ready finance agent with governed USD revenue, invoice-grain, customer, GL account, and calendar analysis guidance.`
+- Agent instruction:
 
-   > Answer only from the attached finance semantic model. Start with the direct answer, then show the relevant period, currency, and filters. Use concise tables for rankings and comparisons. Use charts for trends when available. Clearly label USD and percentages. If the requested result is unavailable, say what is missing instead of estimating. Keep technical keys and load details out of business answers.
-
-6. Publish the agent.
+  > Answer only from the attached finance semantic model. Start with the direct answer, then show the relevant period, currency, and filters. Use concise tables for rankings and comparisons. Use charts for trends when available. Clearly label USD and percentages. If the requested result is unavailable, say what is missing instead of estimating. Keep technical keys and load details out of business answers.
 
 Metric routing, currency rules, invoice grain, calendar definitions, and synonyms live in the prepared semantic model's Prep-for-AI artifacts. Agent instructions control presentation and response behavior; they are not a substitute for model semantics.
 

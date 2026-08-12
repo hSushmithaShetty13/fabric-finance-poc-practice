@@ -7,6 +7,15 @@ This demo compares two semantic models over the same `WH_Finance_Gold` data. The
 | Before | `SM_Finance_AI_Unprepared` | `9490c297-5260-45e1-9644-4832eddc6882` | Valid model with source-style names, implicit aggregation, ambiguous measures, and no Prep for AI artifacts. |
 | After | `SM_Finance_AI_Ready` | `60f5ecdd-48e2-449c-8375-5f001364eedd` | Business names, explicit measures, descriptions, synonyms, scoped AI schema, example prompts, and finance instructions. |
 
+The comparison agents are deployed and published in `WS_Finance_POC`:
+
+| Experience | Data Agent | Fabric item ID | Connected semantic model |
+|---|---|---|---|
+| Before | `DA_Finance_AI_Unprepared` | `929e9cab-963e-4def-b675-15765a337ac1` | `SM_Finance_AI_Unprepared` |
+| After | `DA_Finance_AI_Ready` | `4cab8429-5bda-4973-b267-63962b515c46` | `SM_Finance_AI_Ready` |
+
+Both agents have a published version available. Publishing to the Microsoft 365 Agent Store is disabled.
+
 Both models use Direct Lake on SQL against:
 
 - Workspace: `WS_Finance_POC` (`ad5bf890-cd6e-4786-b69c-15876240823d`)
@@ -65,4 +74,4 @@ The Gold calendar was extended through 2027 so every revenue row has a matching 
 
 Both TMDL models are deployed from this repository. In this workspace, Fabric accepted `Copilot/` parts on create and update requests but omitted them from the subsequent `getDefinition` export. Therefore, use the files under `prepared-model/Copilot/` as the reviewed source specification and apply the AI schema and instructions through **Prep data for AI** in the Power BI service.
 
-Fabric Data Agent generic REST definition authoring is not currently documented in the Fabric item-management support matrix, and Verified Answer payload schemas are not public. Create the two agents and three verified answers in the portal by following [agent-and-verified-answer-runbook.md](agent-and-verified-answer-runbook.md). Do not invent `DataAgent` REST payloads or Verified Answer JSON.
+Fabric Data Agent generic REST definition authoring is not currently documented in the Fabric item-management support matrix, and Verified Answer payload schemas are not public. The two agents and three verified answers were authored in the portal; [agent-and-verified-answer-runbook.md](agent-and-verified-answer-runbook.md) records the live configuration and comparison tests. Do not invent `DataAgent` REST payloads or Verified Answer JSON.
