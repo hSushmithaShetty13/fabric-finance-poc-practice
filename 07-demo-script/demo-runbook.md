@@ -161,6 +161,67 @@ so Bronze and Silver counts can reconcile successfully while `RowsFailed` and `R
 are greater than zero. The reject table is a quarantine copy for investigation; it is not currently
 subtracted from the Silver table.
 
+### Compare one valid and one rejected customer through Bronze, Silver, and Gold
+
+Customers provide the clearest end-to-end example because `gold.DimCustomer` reads from
+`Silver_Customers`. Use these two genuine source records:
+
+| Outcome | CustomerID | CustomerName | Country |
+|---|---:|---|---|
+| Valid | 1 | `GRAPHIC LTD` | `GB` |
+| Rejected | 26 | blank | `AU` |
+
+Customer 1 flows from Bronze to Silver and Gold. Customer 26 matches the configured predicate
+`CustomerName IS NULL OR LEN(Country) <> 2`; it remains in Silver, is copied to
+`silver_rejects.Customers`, and is excluded from Gold by the defensive
+`CustomerName IS NOT NULL AND LEN(Country) = 2` filter.
+
+```sql
+DECLARE @CustomersRunId VARCHAR(50) = '<Customers Silver run ID>';
+
+-- Valid Customer 1: present in Bronze, Silver, and Gold; absent from rejects.
+SELECT 'Bronze' AS Layer, CustomerID, CustomerName, Country
+FROM LH_Finance.dbo.Customers WHERE CustomerID = 1;
+SELECT 'Silver' AS Layer, CustomerID, CustomerName, Country
+FROM LH_Finance.dbo.Silver_Customers WHERE CustomerID = 1;
+SELECT 'Reject' AS Layer, CustomerID, CustomerName, Country
+FROM silver_rejects.Customers WHERE RunId = @CustomersRunId AND CustomerID = '1';
+SELECT 'Gold' AS Layer, CustomerID, CustomerName, CountryCode, IsCurrent
+FROM gold.DimCustomer WHERE CustomerID = 1 AND IsCurrent = 1;
+
+-- Rejected Customer 26: present in Bronze, Silver, and rejects; absent from Gold.
+SELECT 'Bronze' AS Layer, CustomerID, CustomerName, Country
+FROM LH_Finance.dbo.Customers WHERE CustomerID = 26;
+SELECT 'Silver' AS Layer, CustomerID, CustomerName, Country
+FROM LH_Finance.dbo.Silver_Customers WHERE CustomerID = 26;
+SELECT 'Reject' AS Layer, CustomerID, CustomerName, Country, RuleCode, RawRow
+FROM silver_rejects.Customers WHERE RunId = @CustomersRunId AND CustomerID = '26';
+SELECT 'Gold' AS Layer, CustomerID, CustomerName, CountryCode, IsCurrent
+FROM gold.DimCustomer WHERE CustomerID = 26 AND IsCurrent = 1;
+
+-- Data-quality summary and Bronze-to-Silver reconciliation for the same run.
+SELECT PipelineRunId, EntityName, RuleCode, RowsFailed, RejectTable
+FROM audit.DataQuality
+WHERE PipelineRunId = @CustomersRunId AND EntityName = 'Customers';
+
+SELECT PipelineRunId, EntityName, SourceRowCount, TargetRowCount,
+       RejectedRowCount, VarianceRows, VariancePct, TolerancePct, Passed
+FROM audit.Reconciliation
+WHERE PipelineRunId = @CustomersRunId AND EntityName = 'Customers';
+
+-- ValidationLog is not automatically populated by PL_SILVER_LOAD, so invoke it for the demo.
+EXEC audit.SP_RunValidation @PipelineRunId = @CustomersRunId, @EntityName = 'Customers';
+
+SELECT PipelineRunId, RuleName, Expected, Actual, [Result], CheckedAt
+FROM audit.ValidationLog
+WHERE PipelineRunId = @CustomersRunId AND RuleName LIKE 'Customers:%';
+```
+
+For the verified dataset, Customers has 124 Bronze rows, 124 Silver rows, and 5 rejected rows.
+Reconciliation calculates `ABS(124 - 124) = 0` variance rows and `0 / 124 * 100 = 0%` variance.
+The result passes because `0%` is within the configured `0.5%` tolerance. Rejects do not increase
+the variance because this POC retains rejected records in Silver.
+
 ## Step 7 — Simulate a failure live
 
 Easiest options, in increasing order of "visibility":
