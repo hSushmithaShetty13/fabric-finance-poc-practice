@@ -109,6 +109,58 @@ SELECT COUNT(*) FROM gold.FactRevenue;
 SELECT COUNT(*) FROM gold.DimCustomer WHERE IsCurrent = 1;
 ```
 
+### Trace one rejected payment across the audit framework
+
+Use `PaymentID = 25` as the customer-facing example. Its source row is:
+
+```text
+25,29,2025-07-10,0.00,AUD,
+```
+
+`PaymentMethod` is blank, so the Payments `RejectPredicate` classifies it as a DQ reject. The
+business row itself is copied into `silver_rejects.Payments`; the other tables contain aggregate
+evidence for the same Payments pipeline run, rather than another copy of `PaymentID = 25`.
+
+After running the pipeline, replace `<payments RunId>` below with the `PL_SILVER_LOAD` run ID for
+Payments. `SP_RunValidation` is invoked explicitly because it is not currently called by the
+Silver pipeline export.
+
+```sql
+DECLARE @RunId VARCHAR(50) = '<payments RunId>';
+
+-- 1. The rejected business row: blank PaymentMethod triggered DQ_REJECT.
+SELECT RunId, RuleCode, PaymentID, InvoiceID, PaymentDate, Amount,
+       Currency, PaymentMethod, RawRow, RejectedAtUtc
+FROM silver_rejects.Payments
+WHERE RunId = @RunId AND PaymentID = '25';
+
+-- 2. DQ summary: one record for the rule, with all failed Payments rows counted.
+SELECT PipelineRunId, EntityName, RuleCode, RuleDescription, Severity,
+       RowsFailed, RejectTable, CheckedAtUtc
+FROM audit.DataQuality
+WHERE PipelineRunId = @RunId AND EntityName = 'Payments';
+
+-- 3. Reconciliation summary: Bronze, Silver, and rejected counts for Payments.
+SELECT PipelineRunId, EntityName, SourceRowCount, TargetRowCount,
+       RejectedRowCount, VarianceRows, VariancePct, TolerancePct, Passed
+FROM audit.Reconciliation
+WHERE PipelineRunId = @RunId AND EntityName = 'Payments';
+
+-- 4. Create and show the ValidationLog row for this run.
+EXEC audit.SP_RunValidation @PipelineRunId = @RunId, @EntityName = 'Payments';
+
+SELECT PipelineRunId, RuleName, RuleCategory, Severity,
+       Expected, Actual, [Result], CheckedAt
+FROM audit.ValidationLog
+WHERE PipelineRunId = @RunId AND RuleName LIKE 'Payments:%';
+```
+
+Explain the lineage as: **source row -> reject detail -> DQ count -> reconciliation counts ->
+validation result**. In the current POC, Silver contains all Bronze rows, including rejected rows,
+so Bronze and Silver counts can reconcile successfully while `RowsFailed` and `RejectedRowCount`
+are greater than zero. The reject table is a quarantine copy for investigation; it is not currently
+subtracted from the Silver table.
+
 ## Step 7 — Simulate a failure live
 
 Easiest options, in increasing order of "visibility":
